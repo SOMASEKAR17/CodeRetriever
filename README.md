@@ -4,6 +4,11 @@ Version-aware text-to-code retrieval for the Samsung PRISM Gen AI Hackathon, The
 
 Describe what a piece of code does in plain language, and CodeRetriever ranks the matching code: on the AppsRetrieval benchmark, on any version of a codebase, or across every version at once.
 
+
+![Architecture](docs/architecture-overview.png)
+
+Full diagrams: [docs/architecture.html](docs/architecture.html) (overview, incremental indexing, training and submission).
+
 ## Status
 
 Development happens on `dev`; `main` is updated at each milestone.
