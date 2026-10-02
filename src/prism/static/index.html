@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CodeRetriever</title>
+<style>
+:root{--bg:#f6f7f9;--panel:#fff;--text:#1d2330;--muted:#5d6678;--line:#dfe3ea;--accent:#2f6fde;--accent-soft:#e7efff;--code:#f2f4f8;--add:#e6f6ea;--del:#fdecec;--warn:#9a5b00}
+@media (prefers-color-scheme:dark){:root{--bg:#12151b;--panel:#1a1f28;--text:#e6e9ef;--muted:#9aa3b5;--line:#2a313d;--accent:#6c9cff;--accent-soft:#1f2a42;--code:#151a22;--add:#13301d;--del:#3a1717;--warn:#f0b35a}}
+*{box-sizing:border-box}
+body{margin:0;font:14px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--text)}
+header{display:flex;align-items:center;justify-content:space-between;padding:12px 20px;border-bottom:1px solid var(--line);background:var(--panel)}
+header h1{font-size:17px;margin:0}
+header .meta{color:var(--muted);font-size:13px;display:flex;gap:10px;align-items:center}
+main{display:grid;grid-template-columns:340px 1fr;gap:16px;padding:16px;max-width:1400px;margin:0 auto}
+@media (max-width:900px){main{grid-template-columns:1fr}}
+section{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px}
+h2{font-size:14px;margin:0 0 10px}
+input,select,textarea,button{font:inherit;color:inherit}
+input,select,textarea{width:100%;padding:7px 9px;border:1px solid var(--line);border-radius:7px;background:var(--bg)}
+textarea{min-height:110px;resize:vertical}
+button{padding:7px 12px;border:1px solid var(--accent);background:var(--accent);color:#fff;border-radius:7px;cursor:pointer}
+button.secondary{background:transparent;color:var(--accent)}
+button:disabled{opacity:.5;cursor:default}
+.row{display:flex;gap:8px;align-items:center;margin-top:8px}
+.row>*{flex:1}
+.row>button{flex:0 0 auto}
+.source{border-top:1px solid var(--line);padding:10px 0}
+.source:first-of-type{border-top:0}
+.source .name{font-weight:600}
+.muted{color:var(--muted);font-size:12.5px}
+.chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}
+.chip{font-size:12px;padding:1px 8px;border-radius:99px;background:var(--accent-soft);color:var(--accent)}
+.chip.changed{background:var(--warn);color:#fff}
+.versions{max-height:180px;overflow:auto;margin-top:6px;border:1px solid var(--line);border-radius:7px;padding:6px}
+.versions label{display:flex;gap:6px;align-items:center;font-size:13px}
+.versions input{width:auto}
+pre{background:var(--code);border:1px solid var(--line);border-radius:7px;padding:10px;overflow:auto;font:12.5px/1.45 ui-monospace,Consolas,monospace;margin:8px 0 0;max-height:360px}
+.hit{border-top:1px solid var(--line);padding:12px 0}
+.hit:first-child{border-top:0}
+.hit .title{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}
+.hit .rank{font-weight:700;color:var(--accent)}
+.hit .sym{font-weight:600;font-family:ui-monospace,Consolas,monospace}
+.score{font-variant-numeric:tabular-nums;color:var(--muted);font-size:12.5px}
+.status{margin-top:8px;font-size:12.5px;color:var(--muted);white-space:pre-wrap;max-height:150px;overflow:auto}
+.diff .add{background:var(--add);display:block}
+.diff .del{background:var(--del);display:block}
+details summary{cursor:pointer;color:var(--accent);font-size:13px;margin-top:6px}
+</style>
+</head>
+<body>
+<header>
+  <h1>CodeRetriever</h1>
+  <div class="meta"><span id="model"></span><label>Device <select id="device" style="width:auto"><option value="cpu">CPU</option><option value="cuda">GPU</option></select></label></div>
+</header>
+<main>
+  <div>
+    <section>
+      <h2>Add a codebase</h2>
+      <input id="location" placeholder="C:\path\to\repo or https://github.com/user/repo.git">
+      <div class="row"><input id="sourceId" placeholder="name (optional)"><button id="addBtn">Add</button></div>
+      <div id="addStatus" class="status"></div>
+    </section>
+    <section style="margin-top:16px">
+      <h2>Sources</h2>
+      <div id="sources" class="muted">Loading…</div>
+    </section>
+  </div>
+  <section>
+    <h2>Search</h2>
+    <div class="row"><select id="searchSource"></select><select id="searchVersion"></select><input id="k" type="number" value="10" min="1" max="50" style="flex:0 0 80px"></div>
+    <textarea id="query" placeholder="Describe the code you are looking for, e.g. how is the input validated before checkout?" style="margin-top:8px"></textarea>
+    <div class="row"><span id="searchInfo" class="muted"></span><button id="searchBtn">Search</button></div>
+    <div id="results"></div>
+  </section>
+</main>
+<script>
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+async function api(path, options = {}) {
+  const res = await fetch(path, {headers: {"Content-Type": "application/json"}, ...options});
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || res.statusText);
+  return data;
+}
+let sources = [];
+async function loadSettings() {
+  const s = await api("/api/settings");
+  $("model").textContent = s.space;
+  $("device").value = s.device;
+}
+async function loadSources() {
+  sources = await api("/api/sources");
+  const box = $("sources");
+  if (!sources.length) { box.innerHTML = '<span class="muted">No codebases yet. Add a folder or a Git URL.</span>'; }
+  else box.innerHTML = sources.map(s => `
+    <div class="source" data-id="${esc(s.id)}">
+      <div class="name">${esc(s.id)} <span class="muted">${esc(s.kind)}</span></div>
+      <div class="muted">${esc(s.location)}</div>
+      <div class="chips">${s.versions.map(v => `<span class="chip">${esc(v.label)}</span>`).join("") || '<span class="muted">not indexed yet</span>'}</div>
+      <div class="row"><button class="secondary" data-action="choose">Choose versions</button></div>
+      <div class="pick"></div>
+      <div class="status"></div>
+    </div>`).join("");
+  const current = $("searchSource").value;
+  $("searchSource").innerHTML = sources.map(s => `<option value="${esc(s.id)}">${esc(s.id)}</option>`).join("");
+  if (current) $("searchSource").value = current;
+  fillVersions();
+}
+function fillVersions() {
+  const s = sources.find(x => x.id === $("searchSource").value);
+  const versions = s ? s.versions : [];
+  $("searchVersion").innerHTML = `<option value="all">All versions</option>` + versions.map(v => `<option value="${esc(v.label)}">${esc(v.label)}</option>`).join("");
+}
+async function pollJob(id, statusEl) {
+  for (;;) {
+    const job = await api(`/api/jobs/${id}`);
+    statusEl.textContent = job.log.slice(-6).join("\n");
+    if (job.status !== "running") {
+      statusEl.textContent += `\n${job.status} in ${job.seconds}s`;
+      return job;
+    }
+    await new Promise(r => setTimeout(r, 1000));
+  }
+}
+$("addBtn").onclick = async () => {
+  const location = $("location").value.trim();
+  if (!location) return;
+  $("addBtn").disabled = true;
+  try {
+    const {job} = await api("/api/sources", {method: "POST", body: JSON.stringify({location, id: $("sourceId").value.trim() || null})});
+    await pollJob(job, $("addStatus"));
+    await loadSources();
+  } catch (e) { $("addStatus").textContent = e.message; }
+  $("addBtn").disabled = false;
+};
+$("sources").onclick = async ev => {
+  const btn = ev.target.closest("button");
+  if (!btn) return;
+  const card = btn.closest(".source"), id = card.dataset.id, status = card.querySelector(".status");
+  if (btn.dataset.action === "choose") {
+    btn.disabled = true;
+    try {
+      const versions = await api(`/api/sources/${encodeURIComponent(id)}/available`);
+      card.querySelector(".pick").innerHTML = `<div class="versions">${versions.map(v => `<label><input type="checkbox" value="${esc(v.label)}"> ${esc(v.label)} <span class="muted">${esc(v.ref.slice(0, 10))}</span></label>`).join("") || '<span class="muted">no tags or branches</span>'}</div><div class="row"><button data-action="index">Index selected</button></div>`;
+    } catch (e) { status.textContent = e.message; }
+    btn.disabled = false;
+  }
+  if (btn.dataset.action === "index") {
+    const refs = [...card.querySelectorAll(".pick input:checked")].map(i => i.value);
+    const source = sources.find(s => s.id === id);
+    btn.disabled = true;
+    try {
+      const {job} = await api(`/api/sources/${encodeURIComponent(id)}/index`, {method: "POST", body: JSON.stringify({refs: source.kind === "git" ? refs : null})});
+      const done = await pollJob(job, status);
+      if (done.result) status.textContent += "\n" + done.result.map(r => `${r.label}: ${r.files} files, ${r.chunks_in_version} chunks, ${r.chunks_embedded} newly embedded, ${r.seconds_total}s`).join("\n");
+      await loadSources();
+    } catch (e) { status.textContent = e.message; }
+    btn.disabled = false;
+  }
+};
+$("searchSource").onchange = fillVersions;
+$("device").onchange = async () => {
+  $("device").disabled = true;
+  try { await api("/api/settings", {method: "POST", body: JSON.stringify({device: $("device").value})}); await loadSettings(); }
+  catch (e) { alert(e.message); }
+  $("device").disabled = false;
+};
+function renderDiff(diff) {
+  return diff.split("\n").map(l => l.startsWith("+") && !l.startsWith("+++") ? `<span class="add">${esc(l)}</span>` : l.startsWith("-") && !l.startsWith("---") ? `<span class="del">${esc(l)}</span>` : esc(l)).join("\n");
+}
+$("searchBtn").onclick = async () => {
+  const query = $("query").value.trim();
+  if (!query || !$("searchSource").value) return;
+  $("searchBtn").disabled = true;
+  $("searchInfo").textContent = "Searching…";
+  try {
+    const r = await api("/api/search", {method: "POST", body: JSON.stringify({query, source: $("searchSource").value, version: $("searchVersion").value, k: +$("k").value})});
+    $("searchInfo").textContent = `${r.hits.length} results in ${r.ms} ms · mode: ${r.mode}${r.matched ? " (" + r.matched + ")" : ""}`;
+    $("results").innerHTML = r.hits.map((h, i) => {
+      const occ = h.occurrences ? h.occurrences[0] : null;
+      const path = h.path || (occ && occ.path) || "";
+      const lines = h.start_line ? `${h.start_line}-${h.end_line}` : occ ? `${occ.start_line}-${occ.end_line}` : "";
+      const timeline = h.timeline && h.timeline.length ? `<div class="chips">${h.timeline.map(t => `<span class="chip ${t.changed ? "changed" : ""}" title="${esc(t.path)}">${esc(t.label)}${t.changed ? " · changed" : ""}</span>`).join("")}</div>` : "";
+      const diff = h.diff ? `<details><summary>What changed in ${esc(h.label)}</summary><pre class="diff">${renderDiff(h.diff)}</pre></details>` : "";
+      return `<div class="hit"><div class="title"><span class="rank">#${i + 1}</span><span class="sym">${esc(h.symbol)}</span><span class="muted">${esc(path)}:${esc(lines)}${h.label ? " · " + esc(h.label) : ""}</span><span class="score">score ${h.score.toFixed(4)}</span></div>${timeline}<pre>${esc(h.code)}</pre>${diff}</div>`;
+    }).join("") || '<p class="muted">No results. Index a version first.</p>';
+  } catch (e) { $("searchInfo").textContent = e.message; }
+  $("searchBtn").disabled = false;
+};
+$("query").addEventListener("keydown", e => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) $("searchBtn").click(); });
+loadSettings().then(loadSources).catch(e => { $("sources").textContent = e.message; });
+</script>
+</body>
+</html>

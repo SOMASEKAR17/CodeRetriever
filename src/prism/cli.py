@@ -22,11 +22,11 @@ def resolve_device(device: str) -> str:
         return "cpu"
 
 
-def build_engine(args) -> Engine:
+def build_engine(args, device: str | None = None) -> Engine:
     if args.embedder == "hash":
         embedder = HashEmbedder()
     else:
-        device = resolve_device(args.device)
+        device = device or resolve_device(args.device)
         dtype = args.dtype if args.dtype != "auto" else ("bf16" if device == "cuda" else "fp32")
         query_prompt, document_prompt = DEFAULT_QUERY_PROMPT, DEFAULT_DOCUMENT_PROMPT
         if args.prompts_file:
@@ -131,6 +131,13 @@ def cmd_bench(args) -> None:
         print(f"embedded {total_new} chunks for {total_seen} chunk occurrences across versions ({100 * (1 - total_new / total_seen):.1f}% reused)")
 
 
+def cmd_serve(args) -> None:
+    from .server import App, serve
+
+    app = App(lambda device: build_engine(args, device), resolve_device(args.device) if args.embedder != "hash" else "cpu")
+    serve(app, args.host, args.port)
+
+
 def main(argv=None) -> None:
     parser = argparse.ArgumentParser(prog="prism", description="Version-aware code retrieval")
     parser.add_argument("--index-dir", default=os.environ.get("PRISM_INDEX_DIR", str(Path.home() / ".prism")))
@@ -178,6 +185,11 @@ def main(argv=None) -> None:
     p.add_argument("source")
     p.add_argument("--refs", nargs="+", required=True)
     p.set_defaults(func=cmd_bench)
+
+    p = sub.add_parser("serve", help="run the local web app")
+    p.add_argument("--host", default="127.0.0.1")
+    p.add_argument("--port", type=int, default=8765)
+    p.set_defaults(func=cmd_serve)
 
     args = parser.parse_args(argv)
     args.func(args)

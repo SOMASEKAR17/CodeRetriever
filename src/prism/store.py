@@ -23,7 +23,7 @@ CREATE INDEX IF NOT EXISTS idx_versions_source ON versions (source_id);
 class Store:
     def __init__(self, path: str, chunker_config: dict | None = None):
         Path(path).parent.mkdir(parents=True, exist_ok=True)
-        self.db = sqlite3.connect(path)
+        self.db = sqlite3.connect(path, check_same_thread=False)
         self.db.executescript(SCHEMA)
         if chunker_config is not None:
             self._check_meta("chunker", json.dumps(chunker_config, sort_keys=True))

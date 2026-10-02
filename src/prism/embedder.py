@@ -24,6 +24,7 @@ class SentenceTransformerEmbedder:
         from sentence_transformers import SentenceTransformer
 
         self.space = space
+        self.model_name = model
         self.batch_size = batch_size
         self.query_prompt = query_prompt
         self.document_prompt = document_prompt
