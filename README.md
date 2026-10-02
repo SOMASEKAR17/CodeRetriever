@@ -10,12 +10,12 @@ Development happens on `dev`; `main` is updated at each milestone.
 
 | Goal | What it covers | Status |
 |---|---|---|
-| P0 | Retrieval accuracy on MTEB `AppsRetrieval` (NDCG@10, MRR) | Baselines measured; fine-tuning running; pipeline and submission script ready |
+| P0 | Retrieval accuracy on MTEB `AppsRetrieval` (NDCG@10, MRR) | Baselines measured; first fine-tune lost to the base model, so the base model stays; pipeline and submission script ready |
 | P1 | Retrieval on any version, with fast incremental re-indexing | Implemented and tested |
 | Bonus | Retrieval across all versions | Implemented and tested |
 | App | Desktop app, local web app and CLI | Implemented |
 
-Placeholders still to fill: the fine-tuned model in `models/embeddinggemma-apps-ft/` and the final numbers in `benchmarks.json`. Until the model is there, everything runs on the base model.
+The first fine-tune (`egemma-ft-v1`) scored below the base model on both dev and test, so it was not promoted and `models/embeddinggemma-apps-ft/` stays empty; everything runs on the base model. Still to fill: the submission numbers in `benchmarks.json`.
 
 ## How it works
 
@@ -25,7 +25,7 @@ query ──► query views (full / core / I-O spec) ──► EmbeddingGemma �
 codebase version ──► git ls-tree ──► AST chunks ──► content hash ──► embed only new chunks ──► SQLite chunk store
 ```
 
-- **Embedding model:** EmbeddingGemma-300m, fine-tuned on the APPS train split. Small enough for CPU; runs in bf16 on a GPU.
+- **Embedding model:** EmbeddingGemma-300m (base weights; a fine-tuned checkpoint is used only if it beats the base model on dev). Small enough for CPU; runs in bf16 on a GPU.
 - **P0 pipeline:** each query is embedded as weighted views (whole statement, story-only, I/O specification). For APPS-style problems, candidates can be checked against the examples in the statement and the passing ones promoted.
 - **P1:** each file is identified by its Git blob hash and each function by a content hash, so a new version only embeds the functions that changed. A version is a manifest of hashes; searching a version masks the vectors to that manifest.
 - **Bonus:** functions are linked into lineages across versions, following edits and file renames. A search over all versions returns one result per lineage with its version timeline and the diff that changed it. Mentioning a version ("in v2.31") or a change ("when was … added") routes the query automatically.
@@ -46,6 +46,7 @@ codebase version ──► git ls-tree ──► AST chunks ──► content ha
 - The correct solution is in the top 100 for 99.5% of queries but ranked first only about 75% of the time, so the remaining gains are in ranking, not recall.
 - On a 500-query dev set held out from the train split, the generic prompt (`task: search result`) scored 79.4 NDCG@10 vs 78.8 for the code prompt, so fine-tuning keeps the generic prompt.
 - Only 1,650 train queries match the contest style of the test split (no starter code); fine-tuning uses 1,150 of them with 3 mined hard negatives each.
+- Fine-tuning result (`egemma-ft-v1`: 1 epoch, 1,079 tuples, lr 1e-5, CachedMNRL, 161 min on the RTX 4060): dev NDCG@10 fell from 79.41 to 76.28, and test from 84.05 to 82.04 (MRR@10 80.73 to 78.56). The base model is kept. Likely causes: EmbeddingGemma is already strong on this task, and mined hard negatives in APPS include near-duplicate problems (false negatives).
 
 ### Dataset notes
 
