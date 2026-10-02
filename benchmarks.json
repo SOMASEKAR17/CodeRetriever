@@ -2,5 +2,5 @@
   {"name": "EmbeddingGemma-300m (base)", "kind": "baseline", "ndcg_at_10": 84.05, "mrr_at_10": 80.73, "recall_at_100": 99.52, "device": "RTX 4060, bf16", "minutes": 3.7},
   {"name": "Qwen3-Embedding-0.6B (base)", "kind": "baseline", "ndcg_at_10": 75.92, "mrr_at_10": 71.75, "recall_at_100": 98.22, "device": "RTX 4060, bf16", "minutes": 7.0},
   {"name": "EmbeddingGemma-300m fine-tuned on APPS train (egemma-ft-v1, not kept)", "kind": "fine-tuned", "ndcg_at_10": 82.04, "mrr_at_10": 78.56, "recall_at_100": 98.88, "device": "RTX 4060, bf16", "minutes": 3.8},
-  {"name": "Full pipeline (base model + query views), CPU", "kind": "submission", "ndcg_at_10": null, "mrr_at_10": null, "recall_at_100": null, "device": "pending", "minutes": null}
+  {"name": "Submission: PrePostPipelineEncoder, base EmbeddingGemma-300m, CPU", "kind": "submission", "ndcg_at_10": 84.03, "mrr_at_10": 80.70, "recall_at_100": 99.52, "device": "Ryzen 7 CPU, fp32", "minutes": 97.9}
 ]

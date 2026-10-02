@@ -20,7 +20,7 @@ Development happens on `dev`; `main` is updated at each milestone.
 | Bonus | Retrieval across all versions | Implemented and tested |
 | App | Desktop app, local web app and CLI | Implemented |
 
-The first fine-tune (`egemma-ft-v1`) scored below the base model on both dev and test, so it was not promoted and `models/embeddinggemma-apps-ft/` stays empty; everything runs on the base model. Still to fill: the submission numbers in `benchmarks.json`.
+The first fine-tune (`egemma-ft-v1`) scored below the base model on both dev and test, so it was not promoted and `models/embeddinggemma-apps-ft/` stays empty; everything runs on the base model. The submission file is `results/appsretrieval_results.json` (84.03 NDCG@10 on CPU).
 
 ## How it works
 
@@ -52,6 +52,19 @@ codebase version ──► git ls-tree ──► AST chunks ──► content ha
 - On a 500-query dev set held out from the train split, the generic prompt (`task: search result`) scored 79.4 NDCG@10 vs 78.8 for the code prompt, so fine-tuning keeps the generic prompt.
 - Only 1,650 train queries match the contest style of the test split (no starter code); fine-tuning uses 1,150 of them with 3 mined hard negatives each.
 - Fine-tuning result (`egemma-ft-v1`: 1 epoch, 1,079 tuples, lr 1e-5, CachedMNRL, 161 min on the RTX 4060): dev NDCG@10 fell from 79.41 to 76.28, and test from 84.05 to 82.04 (MRR@10 80.73 to 78.56). The base model is kept. Likely causes: EmbeddingGemma is already strong on this task, and mined hard negatives in APPS include near-duplicate problems (false negatives).
+
+### Submission run and query views
+
+| Run | Device | NDCG@10 | MRR@10 | Recall@100 | Time |
+|---|---|---|---|---|---|
+| Pipeline encoder, full statement only (**submission**) | CPU, fp32 | **84.03** | **80.70** | 99.52% | 97.9 min |
+| Pipeline encoder, full statement only | RTX 4060, bf16 | 84.05 | 80.73 | 99.52% | 4.4 min |
+| + core view (0.5) | RTX 4060, bf16 | 82.10 | 78.60 | 99.28% | 5.3 min |
+| + core (0.5) + I/O view (0.25) | RTX 4060, bf16 | 82.68 | 79.31 | 99.31% | 6.0 min |
+
+- CPU fp32 matches the GPU score to within 0.02, so the CPU-first submission loses nothing.
+- Adding story-only or I/O-only views to the query embedding lowers the score; the default stays at the full statement (`query_views: {full: 1.0}`), which was the configured default before these runs.
+- The submission JSON is `results/appsretrieval_results.json`; attach it to a GitHub release.
 
 ### Dataset notes
 
