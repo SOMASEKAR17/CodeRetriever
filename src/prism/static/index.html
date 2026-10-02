@@ -25,6 +25,13 @@ a{color:inherit}
 
 .top{position:fixed;inset:0 0 auto 0;height:64px;display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:24px;padding:0 28px;background:var(--bg);border-bottom:1px solid var(--line);z-index:30}
 .brand{display:flex;align-items:center;gap:16px}
+.traffic{display:none;gap:8px;align-items:center;margin-right:6px}
+body.native .traffic{display:flex}
+.traffic button{width:12px;height:12px;border-radius:50%;border:0;padding:0;cursor:pointer;display:grid;place-items:center}
+.traffic .tl-close{background:#ff5f57}.traffic .tl-min{background:#febc2e}.traffic .tl-max{background:#28c840}
+.traffic svg{width:6px;height:6px;stroke:rgba(0,0,0,.6);stroke-width:1.6;fill:none;opacity:0;transition:opacity .15s}
+.traffic:hover svg{opacity:1}
+body.native.blur .traffic button{background:#3a3a3a}
 .brand b{font-weight:600;font-size:17px;letter-spacing:-.01em}
 .iconbtn{width:34px;height:34px;display:grid;place-items:center;border:1px solid var(--line);border-radius:50%;background:none;cursor:pointer;transition:border-color .2s}
 .iconbtn:hover{border-color:var(--fg)}
@@ -151,8 +158,13 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 </style>
 </head>
 <body>
-<header class="top">
+<header class="top pywebview-drag-region">
   <div class="brand">
+    <div class="traffic" id="traffic">
+      <button class="tl-close" data-win="close" title="Close" aria-label="Close"><svg viewBox="0 0 6 6"><path d="M1 1l4 4M5 1L1 5"/></svg></button>
+      <button class="tl-min" data-win="minimize" title="Minimize" aria-label="Minimize"><svg viewBox="0 0 6 6"><path d="M0.5 3h5"/></svg></button>
+      <button class="tl-max" data-win="toggle_maximize" title="Maximize" aria-label="Maximize"><svg viewBox="0 0 6 6"><path d="M3 0.5v5M0.5 3h5"/></svg></button>
+    </div>
     <button class="iconbtn" id="openLeft" title="Codebases" aria-label="Open codebases"><svg viewBox="0 0 16 16"><path d="M2 4h12M2 8h12M2 12h12"/></svg></button>
     <b>CodeRetriever</b>
   </div>
@@ -369,6 +381,18 @@ async function pollJob(id, onTick) {
     await new Promise(r => setTimeout(r, 800));
   }
 }
+function enableNativeChrome() {
+  if (document.body.classList.contains("native") || !(window.pywebview && window.pywebview.api && window.pywebview.api.minimize)) return;
+  document.body.classList.add("native");
+  const top = document.querySelector(".top");
+  top.querySelectorAll("button,li,select,input,.devinfo").forEach(el => el.addEventListener("mousedown", e => e.stopPropagation()));
+  $("traffic").onclick = e => { const b = e.target.closest("[data-win]"); if (b) window.pywebview.api[b.dataset.win](); };
+  top.addEventListener("dblclick", e => { if (!e.target.closest("button,li")) window.pywebview.api.toggle_maximize(); });
+  window.addEventListener("blur", () => document.body.classList.add("blur"));
+  window.addEventListener("focus", () => document.body.classList.remove("blur"));
+}
+if (window.pywebview) enableNativeChrome();
+window.addEventListener("pywebviewready", enableNativeChrome);
 if (window.pywebview) $("browseBtn").style.display = "inline-block";
 window.addEventListener("pywebviewready", () => $("browseBtn").style.display = "inline-block");
 $("browseBtn").onclick = async () => {

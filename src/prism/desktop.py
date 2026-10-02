@@ -7,6 +7,21 @@ from .server import App, make_server
 class Bridge:
     def __init__(self):
         self._window = None
+        self._maximized = False
+
+    def minimize(self):
+        self._window.minimize()
+
+    def toggle_maximize(self):
+        if self._maximized:
+            self._window.restore()
+        else:
+            self._window.maximize()
+        self._maximized = not self._maximized
+        return self._maximized
+
+    def close(self):
+        self._window.destroy()
 
     def pick_folder(self):
         import webview
@@ -48,6 +63,8 @@ def launch(app: App, host: str = "127.0.0.1", port: int = 8765) -> None:
         min_size=(900, 640),
         js_api=bridge,
         background_color="#0b0b0b",
+        frameless=True,
+        easy_drag=False,
     )
     webview.start()
     server.shutdown()
