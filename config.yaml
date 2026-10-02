@@ -1,0 +1,41 @@
+index_dir: ~/.prism
+device: auto
+space: auto
+
+embedder:
+  base_model: google/embeddinggemma-300m
+  base_revision: 64614b0b8b64f0c6c1e52b07e4e9a4e8fe4d2da2
+  checkpoint: models/embeddinggemma-apps-ft
+  prompts_file: models/embeddinggemma-apps-ft/prompts.json
+  query_prompt: "task: search result | query: "
+  document_prompt: "title: {title} | text: "
+  max_length: 2048
+  batch_size: 8
+
+profiles:
+  cpu:
+    dtype: fp32
+    reranker: null
+    rerank_top_k: 0
+  gpu:
+    dtype: bf16
+    reranker: Qwen/Qwen3-Reranker-4B
+    rerank_top_k: 50
+
+query_views:
+  full: 1.0
+  core: 0.0
+  io: 0.0
+
+execution_rerank:
+  top_k: 20
+  timeout_seconds: 2.0
+  workers: 4
+
+chunking:
+  max_lines: 200
+  window_overlap: 20
+
+server:
+  host: 127.0.0.1
+  port: 8765

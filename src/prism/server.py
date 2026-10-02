@@ -18,7 +18,30 @@ class App:
 
     def settings(self) -> dict:
         embedder = self.engine.embedder
-        return {"device": self.device, "space": embedder.space, "dim": embedder.dim, "model": getattr(embedder, "model_name", embedder.space)}
+        try:
+            import torch
+
+            gpu = torch.cuda.get_device_name(0) if torch.cuda.is_available() else None
+        except Exception:
+            gpu = None
+        return {
+            "device": self.device,
+            "gpu": gpu,
+            "space": embedder.space,
+            "dim": embedder.dim,
+            "model": getattr(embedder, "model_name", embedder.space),
+            "reranker": bool(self.engine.reranker),
+            "index_dir": str(self.engine.index_dir),
+        }
+
+    def benchmarks(self) -> list[dict]:
+        from .config import REPO_ROOT
+
+        path = REPO_ROOT / "benchmarks.json"
+        if not path.exists():
+            return []
+        with open(path, encoding="utf-8") as f:
+            return json.load(f)
 
     def set_device(self, device: str) -> dict:
         with self.lock:
@@ -130,6 +153,8 @@ def make_handler(app: App):
                 if parts[:1] != ["api"]:
                     return self._send(404, {"error": "not found"})
                 route = parts[1:]
+                if method == "GET" and route == ["benchmarks"]:
+                    return self._send(200, app.benchmarks())
                 if method == "GET" and route == ["settings"]:
                     return self._send(200, app.settings())
                 if method == "POST" and route == ["settings"]:
@@ -162,8 +187,19 @@ def make_handler(app: App):
     return Handler
 
 
+def make_server(app: App, host: str = "127.0.0.1", port: int = 8765) -> ThreadingHTTPServer:
+    last_error = None
+    for candidate in range(port, port + 20):
+        try:
+            return ThreadingHTTPServer((host, candidate), make_handler(app))
+        except OSError as exc:
+            last_error = exc
+    raise last_error
+
+
 def serve(app: App, host: str = "127.0.0.1", port: int = 8765) -> None:
-    server = ThreadingHTTPServer((host, port), make_handler(app))
+    server = make_server(app, host, port)
+    host, port = server.server_address[:2]
     print(f"CodeRetriever running at http://{host}:{port}  (device: {app.device}, Ctrl+C to stop)")
     try:
         server.serve_forever()

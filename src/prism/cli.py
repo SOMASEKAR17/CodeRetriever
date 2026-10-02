@@ -1,52 +1,47 @@
 import argparse
 import json
-import os
 import sys
 import time
 from pathlib import Path
 
-from .embedder import DEFAULT_DOCUMENT_PROMPT, DEFAULT_QUERY_PROMPT, HashEmbedder, SentenceTransformerEmbedder
+from .chunker import Chunker
+from .config import Config, resolve_device
+from .embedder import HashEmbedder, SentenceTransformerEmbedder
 from .engine import Engine
-
-DEFAULT_MODEL = "google/embeddinggemma-300m"
-
-
-def resolve_device(device: str) -> str:
-    if device != "auto":
-        return device
-    try:
-        import torch
-
-        return "cuda" if torch.cuda.is_available() else "cpu"
-    except Exception:
-        return "cpu"
 
 
 def build_engine(args, device: str | None = None) -> Engine:
+    config = Config.load(args.config)
+    index_dir = args.index_dir or str(config.index_dir)
+    chunk_cfg = config["chunking"]
+    chunker = Chunker(max_lines=chunk_cfg["max_lines"], window_overlap=chunk_cfg["window_overlap"])
     if args.embedder == "hash":
-        embedder = HashEmbedder()
-    else:
-        device = device or resolve_device(args.device)
-        dtype = args.dtype if args.dtype != "auto" else ("bf16" if device == "cuda" else "fp32")
-        query_prompt, document_prompt = DEFAULT_QUERY_PROMPT, DEFAULT_DOCUMENT_PROMPT
-        if args.prompts_file:
-            with open(args.prompts_file, encoding="utf-8") as f:
-                prompts = json.load(f)
-            query_prompt = prompts["query"]
-            document_prompt = prompts["document"].replace("title: none", "title: {title}")
-        model = args.checkpoint or args.model
-        space = args.space or Path(model.rstrip("/\\")).name
-        embedder = SentenceTransformerEmbedder(
-            model,
-            space=space,
-            device=device,
-            dtype=dtype,
-            max_length=args.max_length,
-            batch_size=args.batch_size,
-            query_prompt=query_prompt,
-            document_prompt=document_prompt,
-        )
-    return Engine(args.index_dir, embedder)
+        return Engine(index_dir, HashEmbedder(), chunker)
+    device = device or resolve_device(args.device or config["device"])
+    profile = config.profile(device)
+    choice = config.model_choice()
+    model = args.checkpoint or choice.model
+    space = args.space or (choice.space if not args.checkpoint else model.rstrip("/\\").split("/")[-1].split("\\")[-1])
+    if not choice.fine_tuned and not args.checkpoint:
+        print(f"note: fine-tuned checkpoint not found, using base model {choice.model}", file=sys.stderr)
+    emb_cfg = config["embedder"]
+    embedder = SentenceTransformerEmbedder(
+        model,
+        space=space,
+        device=device,
+        dtype=args.dtype if args.dtype != "auto" else profile["dtype"],
+        max_length=emb_cfg["max_length"],
+        batch_size=emb_cfg["batch_size"],
+        query_prompt=choice.query_prompt,
+        document_prompt=choice.document_prompt,
+        revision=None if args.checkpoint else choice.revision,
+    )
+    reranker = None
+    if profile.get("reranker") and not args.no_rerank:
+        from .reranker import load_reranker
+
+        reranker = load_reranker(profile["reranker"], device)
+    return Engine(index_dir, embedder, chunker, reranker=reranker, rerank_top_k=profile.get("rerank_top_k") or 0)
 
 
 def cmd_add(args) -> None:
@@ -131,25 +126,38 @@ def cmd_bench(args) -> None:
         print(f"embedded {total_new} chunks for {total_seen} chunk occurrences across versions ({100 * (1 - total_new / total_seen):.1f}% reused)")
 
 
-def cmd_serve(args) -> None:
-    from .server import App, serve
+def _app(args):
+    from .server import App
 
-    app = App(lambda device: build_engine(args, device), resolve_device(args.device) if args.embedder != "hash" else "cpu")
-    serve(app, args.host, args.port)
+    config = Config.load(args.config)
+    device = "cpu" if args.embedder == "hash" else resolve_device(args.device or config["device"])
+    return App(lambda d: build_engine(args, d), device), config
+
+
+def cmd_serve(args) -> None:
+    from .server import serve
+
+    app, config = _app(args)
+    serve(app, args.host or config["server"]["host"], args.port or config["server"]["port"])
+
+
+def cmd_desktop(args) -> None:
+    from .desktop import launch
+
+    app, config = _app(args)
+    launch(app, config["server"]["host"], args.port or config["server"]["port"])
 
 
 def main(argv=None) -> None:
     parser = argparse.ArgumentParser(prog="prism", description="Version-aware code retrieval")
-    parser.add_argument("--index-dir", default=os.environ.get("PRISM_INDEX_DIR", str(Path.home() / ".prism")))
+    parser.add_argument("--config", default=None)
+    parser.add_argument("--index-dir", default=None)
     parser.add_argument("--embedder", choices=["model", "hash"], default="model")
-    parser.add_argument("--model", default=DEFAULT_MODEL)
     parser.add_argument("--checkpoint", default=None)
     parser.add_argument("--space", default=None)
-    parser.add_argument("--prompts-file", default=None)
-    parser.add_argument("--device", choices=["auto", "cpu", "cuda"], default="auto")
+    parser.add_argument("--device", choices=["auto", "cpu", "cuda"], default=None)
     parser.add_argument("--dtype", choices=["auto", "fp32", "bf16"], default="auto")
-    parser.add_argument("--max-length", type=int, default=2048)
-    parser.add_argument("--batch-size", type=int, default=8)
+    parser.add_argument("--no-rerank", action="store_true")
     sub = parser.add_subparsers(dest="command", required=True)
 
     p = sub.add_parser("add", help="register a git repo (path or URL), a folder, or JSONL snippet files")
@@ -186,10 +194,14 @@ def main(argv=None) -> None:
     p.add_argument("--refs", nargs="+", required=True)
     p.set_defaults(func=cmd_bench)
 
-    p = sub.add_parser("serve", help="run the local web app")
-    p.add_argument("--host", default="127.0.0.1")
-    p.add_argument("--port", type=int, default=8765)
+    p = sub.add_parser("serve", help="run the local web app in your browser")
+    p.add_argument("--host", default=None)
+    p.add_argument("--port", type=int, default=None)
     p.set_defaults(func=cmd_serve)
+
+    p = sub.add_parser("desktop", help="run the desktop app window")
+    p.add_argument("--port", type=int, default=None)
+    p.set_defaults(func=cmd_desktop)
 
     args = parser.parse_args(argv)
     args.func(args)

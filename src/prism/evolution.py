@@ -161,9 +161,7 @@ def search_lineages(engine, query: str, source_id: str, k: int = 10, candidates:
     for item in versions:
         hashes.update(store.version_chunk_hashes(item["version_id"]))
     mask = engine.vectors.mask("all:" + source_id + ":" + str(len(versions)), list(hashes))
-    query_vec = engine.embedder.embed_queries([query])[0]
-    rows, scores = engine.vectors.search(query_vec, mask, candidates)
-    score_of = {engine.vectors.hashes[r]: float(s) for r, s in zip(rows, scores)}
+    score_of = dict(engine.candidates(query, mask, candidates))
     if not score_of:
         return intent, []
     placeholders = ",".join("?" * len(score_of))

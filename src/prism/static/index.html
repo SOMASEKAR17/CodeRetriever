@@ -5,191 +5,389 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>CodeRetriever</title>
 <style>
-:root{--bg:#f6f7f9;--panel:#fff;--text:#1d2330;--muted:#5d6678;--line:#dfe3ea;--accent:#2f6fde;--accent-soft:#e7efff;--code:#f2f4f8;--add:#e6f6ea;--del:#fdecec;--warn:#9a5b00}
-@media (prefers-color-scheme:dark){:root{--bg:#12151b;--panel:#1a1f28;--text:#e6e9ef;--muted:#9aa3b5;--line:#2a313d;--accent:#6c9cff;--accent-soft:#1f2a42;--code:#151a22;--add:#13301d;--del:#3a1717;--warn:#f0b35a}}
+:root{
+  --bg1:#4a0b2c;--bg2:#6e1645;--bg3:#8f2a5c;
+  --glass:rgba(255,255,255,.08);--glass2:rgba(255,255,255,.14);--glass3:rgba(255,255,255,.22);
+  --stroke:rgba(255,255,255,.14);--text:#fff;--muted:rgba(255,255,255,.68);--faint:rgba(255,255,255,.45);
+  --hero1:#ff3b6b;--hero2:#d0145a;--hero3:#8c0f3f;--accent:#ff5c8a;--gold:#f6b93b;--ok:#3ddc84;--warn:#ffb347;
+  --code:rgba(24,4,16,.55);--radius:16px;
+  --font:"gg sans","Nunito","Segoe UI Variable Display","Segoe UI",system-ui,-apple-system,sans-serif;
+  --mono:"Cascadia Code","JetBrains Mono",Consolas,ui-monospace,monospace;
+}
 *{box-sizing:border-box}
-body{margin:0;font:14px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--text)}
-header{display:flex;align-items:center;justify-content:space-between;padding:12px 20px;border-bottom:1px solid var(--line);background:var(--panel)}
-header h1{font-size:17px;margin:0}
-header .meta{color:var(--muted);font-size:13px;display:flex;gap:10px;align-items:center}
-main{display:grid;grid-template-columns:340px 1fr;gap:16px;padding:16px;max-width:1400px;margin:0 auto}
-@media (max-width:900px){main{grid-template-columns:1fr}}
-section{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px}
-h2{font-size:14px;margin:0 0 10px}
-input,select,textarea,button{font:inherit;color:inherit}
-input,select,textarea{width:100%;padding:7px 9px;border:1px solid var(--line);border-radius:7px;background:var(--bg)}
-textarea{min-height:110px;resize:vertical}
-button{padding:7px 12px;border:1px solid var(--accent);background:var(--accent);color:#fff;border-radius:7px;cursor:pointer}
-button.secondary{background:transparent;color:var(--accent)}
-button:disabled{opacity:.5;cursor:default}
-.row{display:flex;gap:8px;align-items:center;margin-top:8px}
-.row>*{flex:1}
-.row>button{flex:0 0 auto}
-.source{border-top:1px solid var(--line);padding:10px 0}
-.source:first-of-type{border-top:0}
-.source .name{font-weight:600}
-.muted{color:var(--muted);font-size:12.5px}
-.chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}
-.chip{font-size:12px;padding:1px 8px;border-radius:99px;background:var(--accent-soft);color:var(--accent)}
-.chip.changed{background:var(--warn);color:#fff}
-.versions{max-height:180px;overflow:auto;margin-top:6px;border:1px solid var(--line);border-radius:7px;padding:6px}
-.versions label{display:flex;gap:6px;align-items:center;font-size:13px}
-.versions input{width:auto}
-pre{background:var(--code);border:1px solid var(--line);border-radius:7px;padding:10px;overflow:auto;font:12.5px/1.45 ui-monospace,Consolas,monospace;margin:8px 0 0;max-height:360px}
-.hit{border-top:1px solid var(--line);padding:12px 0}
-.hit:first-child{border-top:0}
-.hit .title{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}
-.hit .rank{font-weight:700;color:var(--accent)}
-.hit .sym{font-weight:600;font-family:ui-monospace,Consolas,monospace}
-.score{font-variant-numeric:tabular-nums;color:var(--muted);font-size:12.5px}
-.status{margin-top:8px;font-size:12.5px;color:var(--muted);white-space:pre-wrap;max-height:150px;overflow:auto}
-.diff .add{background:var(--add);display:block}
-.diff .del{background:var(--del);display:block}
-details summary{cursor:pointer;color:var(--accent);font-size:13px;margin-top:6px}
+html,body{height:100%}
+body{margin:0;font:14px/1.5 var(--font);color:var(--text);background:radial-gradient(1100px 700px at 15% -10%,var(--bg3) 0%,transparent 60%),radial-gradient(900px 600px at 100% 110%,#a3346b 0%,transparent 55%),linear-gradient(160deg,var(--bg1) 0%,var(--bg2) 50%,#3d0925 100%);background-attachment:fixed;overflow:hidden}
+button,input,select,textarea{font:inherit;color:inherit}
+::-webkit-scrollbar{width:10px;height:10px}::-webkit-scrollbar-thumb{background:rgba(255,255,255,.18);border-radius:10px;border:3px solid transparent;background-clip:padding-box}
+.app{display:grid;grid-template-columns:76px 236px minmax(0,1fr) 300px;height:100vh}
+.rail{display:flex;flex-direction:column;align-items:center;gap:10px;padding:14px 0;background:rgba(30,3,18,.35)}
+.rail .sep{width:32px;height:2px;border-radius:2px;background:var(--stroke)}
+.orb{width:48px;height:48px;border-radius:50%;display:grid;place-items:center;font-weight:800;font-size:15px;cursor:pointer;border:0;position:relative;transition:border-radius .18s,transform .18s;box-shadow:0 6px 18px rgba(0,0,0,.25)}
+.orb:hover{border-radius:16px}
+.orb.active::before{content:"";position:absolute;left:-14px;top:10px;width:5px;height:28px;border-radius:0 5px 5px 0;background:#fff}
+.orb.logo{background:linear-gradient(135deg,#ff7aa8,#c2185b);font-size:18px}
+.orb.add{background:var(--gold);color:#4a0b2c;font-size:24px}
+#railSources{display:flex;flex-direction:column;gap:10px;overflow:auto;flex:1;padding:4px 0}
+.sidebar{display:flex;flex-direction:column;background:linear-gradient(180deg,rgba(255,255,255,.09),rgba(255,255,255,.04));border-right:1px solid var(--stroke);backdrop-filter:blur(14px)}
+.sidebar h1{font-size:18px;font-weight:800;margin:20px 18px 14px;letter-spacing:.2px}
+.nav{list-style:none;margin:0;padding:0 10px;display:flex;flex-direction:column;gap:3px}
+.nav li{display:flex;align-items:center;gap:12px;padding:9px 12px;border-radius:10px;cursor:pointer;color:var(--muted);font-weight:600}
+.nav li:hover{background:var(--glass);color:#fff}
+.nav li.active{background:var(--glass3);color:#fff}
+.nav svg{width:20px;height:20px;flex:0 0 20px}
+.sidebar .spacer{flex:1}
+.devicebar{margin:12px;padding:10px;border-radius:14px;background:rgba(30,3,18,.35);display:flex;align-items:center;gap:10px}
+.devicebar .chip-ico{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(135deg,#ff7aa8,#7b1fa2);font-weight:800;font-size:12px}
+.devicebar .meta{flex:1;min-width:0}
+.devicebar .meta b{display:block;font-size:13px}
+.devicebar .meta span{display:block;font-size:11.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.toggle{display:flex;background:rgba(255,255,255,.1);border-radius:99px;padding:3px}
+.toggle button{border:0;background:transparent;padding:4px 10px;border-radius:99px;cursor:pointer;font-weight:700;font-size:12px;color:var(--muted)}
+.toggle button.on{background:#fff;color:var(--bg2)}
+.content{overflow:auto;padding:14px 26px 40px}
+.topbar{display:flex;justify-content:center;margin-bottom:16px;position:sticky;top:0;z-index:2}
+.pill{display:flex;align-items:center;gap:10px;width:min(560px,100%);padding:9px 16px;border-radius:99px;background:rgba(40,4,24,.55);border:1px solid var(--stroke);backdrop-filter:blur(10px)}
+.pill input{border:0;outline:0;background:transparent;flex:1}
+.pill svg{width:18px;height:18px;opacity:.7}
+.hero{position:relative;border-radius:22px;padding:28px 30px;background:radial-gradient(500px 220px at 85% 20%,rgba(255,255,255,.22),transparent 60%),linear-gradient(120deg,var(--hero1) 0%,var(--hero2) 55%,var(--hero3) 100%);box-shadow:0 20px 50px rgba(120,0,40,.45);overflow:hidden}
+.hero::after{content:"";position:absolute;right:-60px;bottom:-80px;width:280px;height:280px;border-radius:50%;background:rgba(255,255,255,.08)}
+.hero h2{margin:0;font-size:28px;font-weight:800;line-height:1.15}
+.hero p{margin:6px 0 16px;color:rgba(255,255,255,.85);max-width:640px}
+.hero textarea{width:100%;min-height:96px;resize:vertical;border-radius:14px;border:1px solid rgba(255,255,255,.35);background:rgba(60,0,25,.35);padding:12px 14px;outline:0;position:relative;z-index:1}
+.hero textarea::placeholder,.pill input::placeholder,.field::placeholder{color:rgba(255,255,255,.6)}
+.controls{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;position:relative;z-index:1}
+.field,select.field{border-radius:12px;border:1px solid var(--stroke);background:rgba(40,4,24,.45);padding:9px 12px;outline:0;min-width:0}
+select.field option{color:#2a0717}
+.btn{border:0;border-radius:12px;padding:9px 18px;font-weight:800;cursor:pointer;background:#fff;color:var(--hero2);box-shadow:0 6px 16px rgba(0,0,0,.18)}
+.btn.ghost{background:var(--glass2);color:#fff;box-shadow:none}
+.btn:disabled{opacity:.55;cursor:default}
+.section-head{display:flex;justify-content:space-between;align-items:baseline;margin:26px 2px 12px}
+.section-head h3{margin:0;font-size:17px;font-weight:800}
+.section-head span{color:var(--muted);font-size:12.5px}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+@media (max-width:1250px){.grid2{grid-template-columns:1fr}}
+.card{border-radius:var(--radius);background:linear-gradient(180deg,rgba(255,255,255,.13),rgba(255,255,255,.05));border:1px solid var(--stroke);overflow:hidden;backdrop-filter:blur(12px);box-shadow:0 10px 28px rgba(0,0,0,.18)}
+.card .banner{padding:16px 18px 14px;background:linear-gradient(135deg,rgba(255,92,138,.55),rgba(123,31,162,.45));position:relative}
+.card .banner .rank{position:absolute;right:14px;top:12px;font-weight:800;font-size:12px;padding:3px 9px;border-radius:99px;background:rgba(0,0,0,.25)}
+.card .banner b{font-size:17px;font-weight:800;font-family:var(--mono);word-break:break-all}
+.card .banner div{color:rgba(255,255,255,.85);font-size:12.5px;margin-top:4px;word-break:break-all}
+.card .body{padding:12px 18px 16px}
+.card.compact .banner{padding:12px 16px}
+.card.compact .banner b{font-size:14.5px}
+.meta-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;color:var(--muted);font-size:12.5px}
+.badge{padding:2px 9px;border-radius:99px;background:var(--glass2);font-size:12px;font-weight:700;color:#fff}
+.badge.changed{background:var(--warn);color:#4a0b2c}
+.badge.ok{background:var(--ok);color:#073b1c}
+pre{margin:10px 0 0;padding:12px;border-radius:12px;background:var(--code);border:1px solid rgba(255,255,255,.08);overflow:auto;max-height:300px;font:12.5px/1.5 var(--mono);color:#ffe9f2}
+.diff .add{display:block;background:rgba(61,220,132,.18)}
+.diff .del{display:block;background:rgba(255,80,110,.22)}
+details summary{cursor:pointer;color:#ffd1e1;font-weight:700;font-size:12.5px;margin-top:8px}
+.panel{background:linear-gradient(180deg,rgba(255,255,255,.1),rgba(255,255,255,.04));border-left:1px solid var(--stroke);overflow:auto;padding:16px;backdrop-filter:blur(14px)}
+.profile{text-align:center;padding:10px 0 16px;border-bottom:1px solid var(--stroke)}
+.profile .big{width:96px;height:96px;margin:0 auto 10px;border-radius:50%;display:grid;place-items:center;font-size:32px;font-weight:800;box-shadow:0 0 0 5px rgba(255,255,255,.12),0 12px 30px rgba(0,0,0,.3)}
+.profile b{display:block;font-size:16px}
+.profile span{font-size:12px;color:var(--muted);word-break:break-all}
+.panel h4{display:flex;justify-content:space-between;margin:16px 2px 8px;font-size:13px;font-weight:800}
+.panel h4 span{color:var(--muted);font-weight:600;font-size:12px;cursor:pointer}
+.person{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:12px;background:var(--glass);margin-bottom:7px}
+.person .av{width:34px;height:34px;flex:0 0 34px;border-radius:50%;display:grid;place-items:center;font-weight:800;font-size:12px}
+.person .t{min-width:0}
+.person .t b{display:block;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.person .t span{font-size:11.5px;color:var(--muted)}
+.view{display:none}.view.active{display:block}
+.panelbox{border-radius:var(--radius);background:var(--glass);border:1px solid var(--stroke);padding:16px}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.row>.grow{flex:1;min-width:200px}
+.checks{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:8px;margin-top:12px;max-height:280px;overflow:auto}
+.checks label{display:flex;gap:8px;align-items:center;padding:8px 10px;border-radius:10px;background:var(--glass);cursor:pointer}
+.progress{height:8px;border-radius:99px;background:rgba(255,255,255,.12);overflow:hidden;margin-top:12px}
+.progress>div{height:100%;width:0;background:linear-gradient(90deg,#fff,var(--accent));transition:width .3s}
+.log{white-space:pre-wrap;font:12px/1.5 var(--mono);color:var(--muted);margin-top:10px;max-height:180px;overflow:auto}
+table{width:100%;border-collapse:collapse;margin-top:12px;font-size:13px}
+th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--stroke)}
+th{color:var(--muted);font-weight:700}
+.empty{color:var(--muted);padding:26px;text-align:center}
+.stat{font-size:28px;font-weight:800}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:rgba(30,3,18,.9);padding:10px 16px;border-radius:12px;border:1px solid var(--stroke);display:none;z-index:9}
 </style>
 </head>
 <body>
-<header>
-  <h1>CodeRetriever</h1>
-  <div class="meta"><span id="model"></span><label>Device <select id="device" style="width:auto"><option value="cpu">CPU</option><option value="cuda">GPU</option></select></label></div>
-</header>
-<main>
-  <div>
-    <section>
-      <h2>Add a codebase</h2>
-      <input id="location" placeholder="C:\path\to\repo or https://github.com/user/repo.git">
-      <div class="row"><input id="sourceId" placeholder="name (optional)"><button id="addBtn">Add</button></div>
-      <div id="addStatus" class="status"></div>
+<div class="app">
+  <nav class="rail">
+    <button class="orb logo" title="CodeRetriever" data-view-link="search">&lt;/&gt;</button>
+    <div class="sep"></div>
+    <div id="railSources"></div>
+    <button class="orb add" title="Add a codebase" data-view-link="codebases">+</button>
+  </nav>
+
+  <aside class="sidebar">
+    <h1>CodeRetriever</h1>
+    <ul class="nav" id="nav">
+      <li data-view="search" class="active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>Search</li>
+      <li data-view="codebases"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7h6l2 2h10v10H3z"/></svg>Codebases</li>
+      <li data-view="versions"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="6" cy="6" r="2.5"/><circle cx="6" cy="18" r="2.5"/><circle cx="18" cy="9" r="2.5"/><path d="M6 8.5v7M18 11.5c0 4-6 3-10.5 5"/></svg>Versions</li>
+      <li data-view="benchmarks"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Benchmarks</li>
+      <li data-view="settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1.2l2-1.6-2-3.4-2.4 1a7 7 0 0 0-2-1.2L14 3h-4l-.5 2.6a7 7 0 0 0-2 1.2l-2.4-1-2 3.4 2 1.6A7 7 0 0 0 5 12c0 .4 0 .8.1 1.2l-2 1.6 2 3.4 2.4-1c.6.5 1.3.9 2 1.2L10 21h4l.5-2.6c.7-.3 1.4-.7 2-1.2l2.4 1 2-3.4-2-1.6c.1-.4.1-.8.1-1.2z"/></svg>Settings</li>
+    </ul>
+    <div class="spacer"></div>
+    <div class="devicebar">
+      <div class="chip-ico" id="deviceIcon">CPU</div>
+      <div class="meta"><b id="deviceName">CPU</b><span id="modelName">loading…</span></div>
+      <div class="toggle" id="deviceToggle"><button data-device="cpu">CPU</button><button data-device="cuda">GPU</button></div>
+    </div>
+  </aside>
+
+  <main class="content">
+    <div class="topbar"><label class="pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="quick" placeholder="Search code by describing what it does…"></label></div>
+
+    <section class="view active" id="view-search">
+      <div class="hero">
+        <h2>Find the code you mean</h2>
+        <p>Describe behaviour in plain language. Search one version of a codebase, or every version at once to see how a function evolved.</p>
+        <textarea id="query" placeholder="e.g. How is the input validated before it reaches the main function?"></textarea>
+        <div class="controls">
+          <select id="searchSource" class="field"></select>
+          <select id="searchVersion" class="field"></select>
+          <select id="searchK" class="field"><option>5</option><option selected>10</option><option>20</option><option>50</option></select>
+          <button class="btn" id="searchBtn">Search</button>
+        </div>
+      </div>
+      <div class="section-head"><h3>Top matches</h3><span id="searchInfo"></span></div>
+      <div class="grid2" id="featured"><div class="empty">Results appear here.</div></div>
+      <div class="section-head" id="moreHead" style="display:none"><h3>More results</h3><span></span></div>
+      <div class="grid2" id="more"></div>
     </section>
-    <section style="margin-top:16px">
-      <h2>Sources</h2>
-      <div id="sources" class="muted">Loading…</div>
+
+    <section class="view" id="view-codebases">
+      <div class="hero" style="padding:22px 26px">
+        <h2>Add a codebase</h2>
+        <p>Point at a folder on this computer or paste a Git HTTPS link. Git repositories expose their tags and branches as versions.</p>
+        <div class="controls">
+          <input id="location" class="field" style="flex:1;min-width:260px" placeholder="C:\path\to\repo  or  https://github.com/user/repo.git">
+          <button class="btn ghost" id="browseBtn" style="display:none">Browse…</button>
+          <input id="sourceId" class="field" style="width:180px" placeholder="name (optional)">
+          <button class="btn" id="addBtn">Add</button>
+        </div>
+        <div class="log" id="addLog" style="color:#ffe3ee"></div>
+      </div>
+      <div class="section-head"><h3>Your codebases</h3><span id="sourceCount"></span></div>
+      <div class="grid2" id="sourceCards"></div>
     </section>
-  </div>
-  <section>
-    <h2>Search</h2>
-    <div class="row"><select id="searchSource"></select><select id="searchVersion"></select><input id="k" type="number" value="10" min="1" max="50" style="flex:0 0 80px"></div>
-    <textarea id="query" placeholder="Describe the code you are looking for, e.g. how is the input validated before checkout?" style="margin-top:8px"></textarea>
-    <div class="row"><span id="searchInfo" class="muted"></span><button id="searchBtn">Search</button></div>
-    <div id="results"></div>
-  </section>
-</main>
+
+    <section class="view" id="view-versions">
+      <div class="section-head" style="margin-top:6px"><h3 id="versionsTitle">Versions</h3><span>Unchanged code is reused, so each new version only embeds what changed.</span></div>
+      <div class="panelbox">
+        <div class="row"><select id="versionsSource" class="field grow"></select><button class="btn ghost" id="loadAvailable">Load versions</button><button class="btn" id="indexBtn">Index selected</button></div>
+        <div class="checks" id="availableList"><div class="empty">Load the tags and branches of a Git source. Folders and snippet files index as a single snapshot.</div></div>
+        <div class="progress"><div id="indexBar"></div></div>
+        <div class="log" id="indexLog"></div>
+      </div>
+      <div class="section-head"><h3>Last indexing run</h3><span></span></div>
+      <div class="panelbox"><table id="statsTable"><thead><tr><th>Version</th><th>Files</th><th>Chunks</th><th>Newly embedded</th><th>Reused</th><th>Time</th></tr></thead><tbody><tr><td colspan="6" class="empty">No runs yet.</td></tr></tbody></table></div>
+    </section>
+
+    <section class="view" id="view-benchmarks">
+      <div class="section-head" style="margin-top:6px"><h3>AppsRetrieval results</h3><span>NDCG@10 and MRR@10 on the CoIR Apps test split</span></div>
+      <div class="grid2" id="benchCards"></div>
+    </section>
+
+    <section class="view" id="view-settings">
+      <div class="section-head" style="margin-top:6px"><h3>Settings</h3><span></span></div>
+      <div class="panelbox" id="settingsBox"></div>
+    </section>
+  </main>
+
+  <aside class="panel">
+    <div class="profile" id="profile"><div class="big" style="background:var(--glass2)">?</div><b>No codebase</b><span>Add one to get started</span></div>
+    <h4>Indexed versions <span data-view-link="versions">Manage</span></h4>
+    <div id="panelVersions"><div class="empty" style="padding:10px">Nothing indexed yet.</div></div>
+    <h4>Recent activity <span id="clearActivity">Clear</span></h4>
+    <div id="activity"><div class="empty" style="padding:10px">No activity yet.</div></div>
+  </aside>
+</div>
+<div class="toast" id="toast"></div>
 <script>
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const state = {sources: [], active: null, settings: null, activity: []};
 async function api(path, options = {}) {
   const res = await fetch(path, {headers: {"Content-Type": "application/json"}, ...options});
   const data = await res.json();
   if (!res.ok) throw new Error(data.error || res.statusText);
   return data;
 }
-let sources = [];
+function toast(msg) { const t = $("toast"); t.textContent = msg; t.style.display = "block"; clearTimeout(t._h); t._h = setTimeout(() => t.style.display = "none", 3500); }
+function hue(text) { let h = 0; for (const c of String(text)) h = (h * 31 + c.charCodeAt(0)) % 360; return h; }
+function avatarStyle(text) { const h = hue(text); const a = 300 + (h % 70), b = (a + 40) % 360; return `background:linear-gradient(135deg,hsl(${a} 85% 62%),hsl(${b} 75% 42%))`; }
+function initials(text) { const parts = String(text).replace(/[^A-Za-z0-9]+/g, " ").trim().split(" "); return ((parts[0] || "?")[0] + (parts[1] ? parts[1][0] : (parts[0] || "")[1] || "")).toUpperCase(); }
+function log(kind, text) { state.activity.unshift({kind, text, at: new Date()}); state.activity = state.activity.slice(0, 30); renderActivity(); }
+function ago(d) { const s = Math.round((Date.now() - d) / 1000); return s < 60 ? `${s}s ago` : s < 3600 ? `${Math.round(s / 60)}m ago` : `${Math.round(s / 3600)}h ago`; }
+function renderActivity() {
+  $("activity").innerHTML = state.activity.length ? state.activity.map(a => `<div class="person"><div class="av" style="${avatarStyle(a.kind)}">${esc(a.kind[0].toUpperCase())}</div><div class="t"><b title="${esc(a.text)}">${esc(a.text)}</b><span>${esc(a.kind)} · ${ago(a.at)}</span></div></div>`).join("") : '<div class="empty" style="padding:10px">No activity yet.</div>';
+}
+function setView(name) {
+  document.querySelectorAll(".view").forEach(v => v.classList.toggle("active", v.id === "view-" + name));
+  document.querySelectorAll("#nav li").forEach(li => li.classList.toggle("active", li.dataset.view === name));
+  if (name === "benchmarks") loadBenchmarks();
+  if (name === "settings") renderSettings();
+}
+document.addEventListener("click", e => { const link = e.target.closest("[data-view-link]"); if (link) setView(link.dataset.viewLink); });
+$("nav").onclick = e => { const li = e.target.closest("li"); if (li) setView(li.dataset.view); };
 async function loadSettings() {
-  const s = await api("/api/settings");
-  $("model").textContent = s.space;
-  $("device").value = s.device;
+  state.settings = await api("/api/settings");
+  const s = state.settings, gpu = s.device === "cuda";
+  $("deviceIcon").textContent = gpu ? "GPU" : "CPU";
+  $("deviceName").textContent = gpu ? (s.gpu || "GPU") : "CPU";
+  $("modelName").textContent = s.space + (s.reranker ? " + reranker" : "");
+  document.querySelectorAll("#deviceToggle button").forEach(b => b.classList.toggle("on", b.dataset.device === s.device));
 }
+$("deviceToggle").onclick = async e => {
+  const b = e.target.closest("button"); if (!b || b.classList.contains("on")) return;
+  toast(`Switching to ${b.textContent}…`);
+  try { await api("/api/settings", {method: "POST", body: JSON.stringify({device: b.dataset.device})}); await loadSettings(); log("device", `Switched to ${b.textContent}`); toast(`Now running on ${b.textContent}`); }
+  catch (err) { toast(err.message); }
+};
+function sourceById(id) { return state.sources.find(s => s.id === id); }
 async function loadSources() {
-  sources = await api("/api/sources");
-  const box = $("sources");
-  if (!sources.length) { box.innerHTML = '<span class="muted">No codebases yet. Add a folder or a Git URL.</span>'; }
-  else box.innerHTML = sources.map(s => `
-    <div class="source" data-id="${esc(s.id)}">
-      <div class="name">${esc(s.id)} <span class="muted">${esc(s.kind)}</span></div>
-      <div class="muted">${esc(s.location)}</div>
-      <div class="chips">${s.versions.map(v => `<span class="chip">${esc(v.label)}</span>`).join("") || '<span class="muted">not indexed yet</span>'}</div>
-      <div class="row"><button class="secondary" data-action="choose">Choose versions</button></div>
-      <div class="pick"></div>
-      <div class="status"></div>
-    </div>`).join("");
-  const current = $("searchSource").value;
-  $("searchSource").innerHTML = sources.map(s => `<option value="${esc(s.id)}">${esc(s.id)}</option>`).join("");
-  if (current) $("searchSource").value = current;
-  fillVersions();
+  state.sources = await api("/api/sources");
+  if (!state.active || !sourceById(state.active)) state.active = state.sources[0]?.id || null;
+  $("railSources").innerHTML = state.sources.map(s => `<button class="orb ${s.id === state.active ? "active" : ""}" style="${avatarStyle(s.id)}" title="${esc(s.id)}" data-source="${esc(s.id)}">${esc(initials(s.id))}</button>`).join("");
+  const options = state.sources.map(s => `<option value="${esc(s.id)}">${esc(s.id)}</option>`).join("") || '<option value="">No codebases</option>';
+  for (const id of ["searchSource", "versionsSource"]) { $(id).innerHTML = options; if (state.active) $(id).value = state.active; }
+  $("sourceCount").textContent = `${state.sources.length} added`;
+  $("sourceCards").innerHTML = state.sources.map(s => `<div class="card compact"><div class="banner"><b>${esc(s.id)}</b><div>${esc(s.location)}</div></div><div class="body"><div class="meta-row"><span class="badge">${esc(s.kind)}</span><span>${s.versions.length} version(s) indexed</span></div><div class="row" style="margin-top:10px"><button class="btn ghost" data-open="${esc(s.id)}">Versions</button><button class="btn" data-search="${esc(s.id)}">Search</button></div></div></div>`).join("") || '<div class="empty">No codebases yet.</div>';
+  fillVersionSelect();
+  renderPanel();
 }
-function fillVersions() {
-  const s = sources.find(x => x.id === $("searchSource").value);
-  const versions = s ? s.versions : [];
-  $("searchVersion").innerHTML = `<option value="all">All versions</option>` + versions.map(v => `<option value="${esc(v.label)}">${esc(v.label)}</option>`).join("");
+function fillVersionSelect() {
+  const s = sourceById($("searchSource").value);
+  $("searchVersion").innerHTML = '<option value="all">All versions</option>' + (s ? s.versions.map(v => `<option value="${esc(v.label)}">${esc(v.label)}</option>`).join("") : "");
 }
-async function pollJob(id, statusEl) {
+function renderPanel() {
+  const s = sourceById(state.active);
+  if (!s) return;
+  $("profile").innerHTML = `<div class="big" style="${avatarStyle(s.id)}">${esc(initials(s.id))}</div><b>${esc(s.id)}</b><span>${esc(s.location)}</span>`;
+  $("panelVersions").innerHTML = s.versions.length ? s.versions.slice().reverse().map(v => `<div class="person"><div class="av" style="${avatarStyle(v.label)}">${esc(initials(v.label))}</div><div class="t"><b>${esc(v.label)}</b><span>${esc(v.version_id.split("@").pop())}</span></div></div>`).join("") : '<div class="empty" style="padding:10px">Nothing indexed yet.</div>';
+}
+function selectSource(id) { state.active = id; $("searchSource").value = id; $("versionsSource").value = id; fillVersionSelect(); loadSources(); }
+$("railSources").onclick = e => { const b = e.target.closest("[data-source]"); if (b) selectSource(b.dataset.source); };
+$("sourceCards").onclick = e => {
+  const open = e.target.closest("[data-open]"), go = e.target.closest("[data-search]");
+  if (open) { selectSource(open.dataset.open); setView("versions"); }
+  if (go) { selectSource(go.dataset.search); setView("search"); $("query").focus(); }
+};
+$("searchSource").onchange = () => selectSource($("searchSource").value);
+$("versionsSource").onchange = () => selectSource($("versionsSource").value);
+async function pollJob(id, onTick) {
   for (;;) {
     const job = await api(`/api/jobs/${id}`);
-    statusEl.textContent = job.log.slice(-6).join("\n");
-    if (job.status !== "running") {
-      statusEl.textContent += `\n${job.status} in ${job.seconds}s`;
-      return job;
-    }
-    await new Promise(r => setTimeout(r, 1000));
+    onTick && onTick(job);
+    if (job.status !== "running") return job;
+    await new Promise(r => setTimeout(r, 800));
   }
 }
+if (window.pywebview || navigator.userAgent.includes("Edg")) $("browseBtn").style.display = "inline-block";
+window.addEventListener("pywebviewready", () => $("browseBtn").style.display = "inline-block");
+$("browseBtn").onclick = async () => {
+  if (!(window.pywebview && window.pywebview.api)) { toast("Folder picker is available in the desktop app"); return; }
+  const path = await window.pywebview.api.pick_folder();
+  if (path) $("location").value = path;
+};
 $("addBtn").onclick = async () => {
-  const location = $("location").value.trim();
-  if (!location) return;
-  $("addBtn").disabled = true;
+  const location = $("location").value.trim(); if (!location) return;
+  $("addBtn").disabled = true; $("addLog").textContent = "";
   try {
     const {job} = await api("/api/sources", {method: "POST", body: JSON.stringify({location, id: $("sourceId").value.trim() || null})});
-    await pollJob(job, $("addStatus"));
+    const done = await pollJob(job, j => $("addLog").textContent = j.log.slice(-4).join("\n"));
+    if (done.status === "done") { log("added", done.result.source); state.active = done.result.source; toast(`Added ${done.result.source}`); $("location").value = ""; }
     await loadSources();
-  } catch (e) { $("addStatus").textContent = e.message; }
+  } catch (err) { $("addLog").textContent = err.message; }
   $("addBtn").disabled = false;
 };
-$("sources").onclick = async ev => {
-  const btn = ev.target.closest("button");
-  if (!btn) return;
-  const card = btn.closest(".source"), id = card.dataset.id, status = card.querySelector(".status");
-  if (btn.dataset.action === "choose") {
-    btn.disabled = true;
-    try {
-      const versions = await api(`/api/sources/${encodeURIComponent(id)}/available`);
-      card.querySelector(".pick").innerHTML = `<div class="versions">${versions.map(v => `<label><input type="checkbox" value="${esc(v.label)}"> ${esc(v.label)} <span class="muted">${esc(v.ref.slice(0, 10))}</span></label>`).join("") || '<span class="muted">no tags or branches</span>'}</div><div class="row"><button data-action="index">Index selected</button></div>`;
-    } catch (e) { status.textContent = e.message; }
-    btn.disabled = false;
-  }
-  if (btn.dataset.action === "index") {
-    const refs = [...card.querySelectorAll(".pick input:checked")].map(i => i.value);
-    const source = sources.find(s => s.id === id);
-    btn.disabled = true;
-    try {
-      const {job} = await api(`/api/sources/${encodeURIComponent(id)}/index`, {method: "POST", body: JSON.stringify({refs: source.kind === "git" ? refs : null})});
-      const done = await pollJob(job, status);
-      if (done.result) status.textContent += "\n" + done.result.map(r => `${r.label}: ${r.files} files, ${r.chunks_in_version} chunks, ${r.chunks_embedded} newly embedded, ${r.seconds_total}s`).join("\n");
-      await loadSources();
-    } catch (e) { status.textContent = e.message; }
-    btn.disabled = false;
-  }
-};
-$("searchSource").onchange = fillVersions;
-$("device").onchange = async () => {
-  $("device").disabled = true;
-  try { await api("/api/settings", {method: "POST", body: JSON.stringify({device: $("device").value})}); await loadSettings(); }
-  catch (e) { alert(e.message); }
-  $("device").disabled = false;
-};
-function renderDiff(diff) {
-  return diff.split("\n").map(l => l.startsWith("+") && !l.startsWith("+++") ? `<span class="add">${esc(l)}</span>` : l.startsWith("-") && !l.startsWith("---") ? `<span class="del">${esc(l)}</span>` : esc(l)).join("\n");
-}
-$("searchBtn").onclick = async () => {
-  const query = $("query").value.trim();
-  if (!query || !$("searchSource").value) return;
-  $("searchBtn").disabled = true;
-  $("searchInfo").textContent = "Searching…";
+$("loadAvailable").onclick = async () => {
+  const id = $("versionsSource").value; if (!id) return;
+  const s = sourceById(id);
+  if (s.kind !== "git") { $("availableList").innerHTML = `<div class="empty">${esc(s.kind)} sources index as one snapshot. Press “Index selected”.</div>`; return; }
+  $("availableList").innerHTML = '<div class="empty">Loading…</div>';
   try {
-    const r = await api("/api/search", {method: "POST", body: JSON.stringify({query, source: $("searchSource").value, version: $("searchVersion").value, k: +$("k").value})});
-    $("searchInfo").textContent = `${r.hits.length} results in ${r.ms} ms · mode: ${r.mode}${r.matched ? " (" + r.matched + ")" : ""}`;
-    $("results").innerHTML = r.hits.map((h, i) => {
-      const occ = h.occurrences ? h.occurrences[0] : null;
-      const path = h.path || (occ && occ.path) || "";
-      const lines = h.start_line ? `${h.start_line}-${h.end_line}` : occ ? `${occ.start_line}-${occ.end_line}` : "";
-      const timeline = h.timeline && h.timeline.length ? `<div class="chips">${h.timeline.map(t => `<span class="chip ${t.changed ? "changed" : ""}" title="${esc(t.path)}">${esc(t.label)}${t.changed ? " · changed" : ""}</span>`).join("")}</div>` : "";
-      const diff = h.diff ? `<details><summary>What changed in ${esc(h.label)}</summary><pre class="diff">${renderDiff(h.diff)}</pre></details>` : "";
-      return `<div class="hit"><div class="title"><span class="rank">#${i + 1}</span><span class="sym">${esc(h.symbol)}</span><span class="muted">${esc(path)}:${esc(lines)}${h.label ? " · " + esc(h.label) : ""}</span><span class="score">score ${h.score.toFixed(4)}</span></div>${timeline}<pre>${esc(h.code)}</pre>${diff}</div>`;
-    }).join("") || '<p class="muted">No results. Index a version first.</p>';
-  } catch (e) { $("searchInfo").textContent = e.message; }
-  $("searchBtn").disabled = false;
+    const versions = await api(`/api/sources/${encodeURIComponent(id)}/available`);
+    const indexed = new Set(s.versions.map(v => v.label));
+    $("availableList").innerHTML = versions.map(v => `<label><input type="checkbox" value="${esc(v.label)}" ${indexed.has(v.label) ? "checked disabled" : ""}><span><b>${esc(v.label)}</b> <span class="meta-row" style="display:inline">${esc(v.ref.slice(0, 10))}</span></span></label>`).join("") || '<div class="empty">No tags or branches found.</div>';
+  } catch (err) { $("availableList").innerHTML = `<div class="empty">${esc(err.message)}</div>`; }
 };
-$("query").addEventListener("keydown", e => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) $("searchBtn").click(); });
-loadSettings().then(loadSources).catch(e => { $("sources").textContent = e.message; });
+$("indexBtn").onclick = async () => {
+  const id = $("versionsSource").value; if (!id) return;
+  const s = sourceById(id);
+  const refs = [...document.querySelectorAll("#availableList input:checked:not(:disabled)")].map(i => i.value);
+  if (s.kind === "git" && !refs.length) { toast("Pick at least one version"); return; }
+  $("indexBtn").disabled = true; $("indexBar").style.width = "5%";
+  try {
+    const {job} = await api(`/api/sources/${encodeURIComponent(id)}/index`, {method: "POST", body: JSON.stringify({refs: s.kind === "git" ? refs : null})});
+    const total = Math.max(1, refs.length);
+    const done = await pollJob(job, j => {
+      $("indexLog").textContent = j.log.slice(-8).join("\n");
+      const finished = j.log.filter(l => l.startsWith("indexed ")).length;
+      $("indexBar").style.width = `${Math.min(95, 5 + 90 * finished / total)}%`;
+    });
+    $("indexBar").style.width = "100%";
+    if (done.status === "done") {
+      $("statsTable").querySelector("tbody").innerHTML = done.result.map(r => { const reused = r.chunks_in_version ? Math.round(100 * (1 - r.chunks_embedded / r.chunks_in_version)) : 0; return `<tr><td>${esc(r.label)}</td><td>${r.files}</td><td>${r.chunks_in_version}</td><td>${r.chunks_embedded}</td><td>${Math.max(0, reused)}%</td><td>${r.seconds_total}s</td></tr>`; }).join("");
+      log("indexed", `${id}: ${done.result.map(r => r.label).join(", ")}`);
+      toast("Indexing finished");
+    } else toast("Indexing failed, see the log");
+    await loadSources();
+  } catch (err) { $("indexLog").textContent = err.message; }
+  $("indexBtn").disabled = false;
+};
+function renderDiff(diff) { return diff.split("\n").map(l => l.startsWith("+") && !l.startsWith("+++") ? `<span class="add">${esc(l)}</span>` : l.startsWith("-") && !l.startsWith("---") ? `<span class="del">${esc(l)}</span>` : esc(l)).join("\n"); }
+function hitCard(h, i, compact) {
+  const occ = h.occurrences && h.occurrences[0];
+  const path = h.path || (occ && occ.path) || "";
+  const lines = h.start_line ? `${h.start_line}-${h.end_line}` : occ ? `${occ.start_line}-${occ.end_line}` : "";
+  const timeline = h.timeline && h.timeline.length ? `<div class="meta-row" style="margin-top:8px">${h.timeline.map(t => `<span class="badge ${t.changed ? "changed" : ""}" title="${esc(t.path)}">${esc(t.label)}${t.changed ? " · changed" : ""}</span>`).join("")}</div>` : "";
+  const diff = h.diff ? `<details><summary>What changed in ${esc(h.label)}</summary><pre class="diff">${renderDiff(h.diff)}</pre></details>` : "";
+  const code = compact ? h.code.split("\n").slice(0, 12).join("\n") : h.code;
+  return `<div class="card ${compact ? "compact" : ""}"><div class="banner"><span class="rank">#${i + 1} · ${h.score.toFixed(3)}</span><b>${esc(h.symbol)}</b><div>${esc(path)}${lines ? ":" + esc(lines) : ""}${h.label ? " · " + esc(h.label) : ""}</div></div><div class="body">${timeline}<pre>${esc(code)}</pre>${diff}</div></div>`;
+}
+async function runSearch() {
+  const query = $("query").value.trim(), source = $("searchSource").value;
+  if (!query) { $("query").focus(); return; }
+  if (!source) { toast("Add and index a codebase first"); setView("codebases"); return; }
+  $("searchBtn").disabled = true; $("searchInfo").textContent = "Searching…";
+  try {
+    const r = await api("/api/search", {method: "POST", body: JSON.stringify({query, source, version: $("searchVersion").value, k: +$("searchK").value})});
+    const mode = r.mode === "version" ? `version ${r.matched}` : r.mode === "change" ? "change history" : "latest across versions";
+    $("searchInfo").textContent = `${r.hits.length} results · ${r.ms} ms · ${mode}`;
+    $("featured").innerHTML = r.hits.slice(0, 2).map((h, i) => hitCard(h, i, false)).join("") || '<div class="empty">No results. Index a version of this codebase first.</div>';
+    $("more").innerHTML = r.hits.slice(2).map((h, i) => hitCard(h, i + 2, true)).join("");
+    $("moreHead").style.display = r.hits.length > 2 ? "flex" : "none";
+    log("search", query.slice(0, 80));
+  } catch (err) { $("searchInfo").textContent = err.message; }
+  $("searchBtn").disabled = false;
+}
+$("searchBtn").onclick = runSearch;
+$("query").addEventListener("keydown", e => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) runSearch(); });
+$("quick").addEventListener("keydown", e => { if (e.key === "Enter" && $("quick").value.trim()) { setView("search"); $("query").value = $("quick").value.trim(); runSearch(); } });
+$("clearActivity").onclick = () => { state.activity = []; renderActivity(); };
+async function loadBenchmarks() {
+  try {
+    const rows = await api("/api/benchmarks");
+    const fmt = v => v == null ? '<span class="badge">pending</span>' : `<span class="stat">${Number(v).toFixed(2)}</span>`;
+    $("benchCards").innerHTML = rows.map(r => `<div class="card"><div class="banner"><span class="rank">${esc(r.kind)}</span><b style="font-family:var(--font)">${esc(r.name)}</b><div>${esc(r.device || "")}${r.minutes ? " · " + r.minutes + " min" : ""}</div></div><div class="body"><div class="row" style="justify-content:space-between"><div><div class="meta-row">NDCG@10</div>${fmt(r.ndcg_at_10)}</div><div><div class="meta-row">MRR@10</div>${fmt(r.mrr_at_10)}</div><div><div class="meta-row">Recall@100</div>${fmt(r.recall_at_100)}</div></div></div></div>`).join("") || '<div class="empty">No benchmark file found.</div>';
+  } catch (err) { $("benchCards").innerHTML = `<div class="empty">${esc(err.message)}</div>`; }
+}
+function renderSettings() {
+  const s = state.settings || {};
+  $("settingsBox").innerHTML = `<table><tbody>
+    <tr><th>Device</th><td>${esc(s.device === "cuda" ? "GPU" : "CPU")}${s.gpu ? " (" + esc(s.gpu) + ")" : ""}</td></tr>
+    <tr><th>Embedding model</th><td>${esc(s.model)}</td></tr>
+    <tr><th>Embedding space</th><td>${esc(s.space)} · ${esc(s.dim)} dimensions</td></tr>
+    <tr><th>Reranker</th><td>${s.reranker ? "on (GPU profile)" : "off"}</td></tr>
+    <tr><th>Index folder</th><td>${esc(s.index_dir)}</td></tr></tbody></table>
+    <p class="meta-row" style="margin-top:12px">Switching between CPU and GPU keeps the same embedding model, so existing indexes stay valid. The GPU profile adds a reranker for the top results.</p>`;
+}
+loadSettings().then(loadSources).catch(err => toast(err.message));
+setInterval(renderActivity, 30000);
 </script>
 </body>
 </html>

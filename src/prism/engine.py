@@ -43,13 +43,15 @@ def _slug(text: str) -> str:
 
 
 class Engine:
-    def __init__(self, index_dir: str, embedder, chunker: Chunker | None = None):
+    def __init__(self, index_dir: str, embedder, chunker: Chunker | None = None, reranker=None, rerank_top_k: int = 0):
         self.index_dir = Path(index_dir)
         self.index_dir.mkdir(parents=True, exist_ok=True)
         self.chunker = chunker or Chunker()
         config = {"max_lines": self.chunker.max_lines, "window_overlap": self.chunker.window_overlap, "whole_file_lines": self.chunker.whole_file_lines}
         self.store = Store(str(self.index_dir / "index.sqlite"), chunker_config=config)
         self.embedder = embedder
+        self.reranker = reranker
+        self.rerank_top_k = rerank_top_k
         self.vectors = VectorIndex(embedder.dim)
         hashes, matrix = self.store.embeddings(embedder.space)
         if hashes:
@@ -171,6 +173,19 @@ class Engine:
         progress(f"indexed {version.label} ({version_id}): {json.dumps(result.as_dict())}")
         return result
 
+    def candidates(self, query: str, mask, k: int) -> list[tuple[str, float]]:
+        query_vec = self.embedder.embed_queries([query])[0]
+        depth = max(k, self.rerank_top_k) if self.reranker else k
+        rows, scores = self.vectors.search(query_vec, mask, depth)
+        ranked = [(self.vectors.hashes[r], float(s)) for r, s in zip(rows, scores)]
+        if self.reranker and ranked:
+            head = ranked[: self.rerank_top_k]
+            codes = [self.store.chunk(h)[2] for h, _ in head]
+            rerank_scores = self.reranker.score(query, codes)
+            head = sorted(((h, 1.0 + r) for (h, _), r in zip(head, rerank_scores)), key=lambda x: -x[1])
+            ranked = head + ranked[self.rerank_top_k:]
+        return ranked[:k]
+
     def search_evolution(self, query: str, source_id: str, k: int = 10):
         from .evolution import search_lineages
 
@@ -195,11 +210,8 @@ class Engine:
         for version_id in version_ids:
             hashes.update(self.store.version_chunk_hashes(version_id))
         mask = self.vectors.mask(key, list(hashes))
-        query_vec = self.embedder.embed_queries([query])[0]
-        rows, scores = self.vectors.search(query_vec, mask, k)
         hits = []
-        for row, score in zip(rows, scores):
-            chunk_hash = self.vectors.hashes[row]
+        for chunk_hash, score in self.candidates(query, mask, k):
             language, symbol, code = self.store.chunk(chunk_hash)
             occurrences = [
                 {"version_id": v, "path": p, "symbol": s, "start_line": a, "end_line": b}

@@ -31,3 +31,5 @@ mteb_cache/
 *.db
 .DS_Store
 Thumbs.db
+models/*
+!models/README.md
