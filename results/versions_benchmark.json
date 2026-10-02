@@ -1,0 +1,77 @@
+{
+  "rows": [
+    {
+      "version_id": "requests@2ad18e0e10e7",
+      "label": "v2.30.0",
+      "files": 35,
+      "blobs_new": 35,
+      "blobs_reused": 0,
+      "chunks_in_version": 533,
+      "chunks_new": 533,
+      "chunks_embedded": 533,
+      "seconds_parse": 0.1,
+      "seconds_embed": 6.33,
+      "seconds_total": 6.43
+    },
+    {
+      "version_id": "requests@147c8511ddbf",
+      "label": "v2.31.0",
+      "files": 35,
+      "blobs_new": 4,
+      "blobs_reused": 31,
+      "chunks_in_version": 534,
+      "chunks_new": 4,
+      "chunks_embedded": 4,
+      "seconds_parse": 0.03,
+      "seconds_embed": 0.09,
+      "seconds_total": 0.13
+    },
+    {
+      "version_id": "requests@d6ebc4a2f1f6",
+      "label": "v2.32.0",
+      "files": 36,
+      "blobs_new": 19,
+      "blobs_reused": 17,
+      "chunks_in_version": 558,
+      "chunks_new": 88,
+      "chunks_embedded": 88,
+      "seconds_parse": 0.24,
+      "seconds_embed": 1.22,
+      "seconds_total": 1.46
+    },
+    {
+      "version_id": "requests@0e322af87745",
+      "label": "v2.32.3",
+      "files": 36,
+      "blobs_new": 2,
+      "blobs_reused": 34,
+      "chunks_in_version": 559,
+      "chunks_new": 7,
+      "chunks_embedded": 7,
+      "seconds_parse": 0.01,
+      "seconds_embed": 0.22,
+      "seconds_total": 0.22
+    }
+  ],
+  "searches": [
+    {
+      "query": "how are redirects followed and limited",
+      "ms": 126.6,
+      "top": [
+        "TestRequests.test_HTTP_302_TOO_MANY_REDIRECTS_WITH_PARAMS @ tests/test_requests.py [v2.32.3]",
+        "TestRequests.test_HTTP_302_TOO_MANY_REDIRECTS @ tests/test_requests.py [v2.32.3]",
+        "TestRequests.test_manual_redirect_with_partial_body_read @ tests/test_requests.py [v2.32.3]"
+      ]
+    },
+    {
+      "query": "where are proxy settings read from the environment",
+      "ms": 79.2,
+      "top": [
+        "test_use_proxy_from_environment @ tests/test_lowlevel.py [v2.32.3]",
+        "TestGetEnvironProxies @ tests/test_utils.py [v2.32.3]",
+        "get_environ_proxies @ src/requests/utils.py [v2.32.3]"
+      ]
+    }
+  ],
+  "markdown": "| Version | Files | Chunks | Newly embedded | Reused | Time (s) |\n|---|---|---|---|---|---|\n| v2.30.0 | 35 | 533 | 533 | 0.0% | 6.43 |\n| v2.31.0 | 35 | 534 | 4 | 99.3% | 0.13 |\n| v2.32.0 | 36 | 558 | 88 | 84.2% | 1.46 |\n| v2.32.3 | 36 | 559 | 7 | 98.7% | 0.22 |\n\nAverage incremental re-index is 10.7x faster than the first full index."
+}

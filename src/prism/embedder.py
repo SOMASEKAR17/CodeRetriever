@@ -32,7 +32,8 @@ class SentenceTransformerEmbedder:
         self.model.max_seq_length = max_length
         if dtype == "bf16":
             self.model.to(torch.bfloat16)
-        self.dim = self.model.get_sentence_embedding_dimension()
+        getter = getattr(self.model, "get_embedding_dimension", None) or self.model.get_sentence_embedding_dimension
+        self.dim = getter()
 
     def _encode(self, texts: list[str], prompt: str) -> np.ndarray:
         vectors = self.model.encode(

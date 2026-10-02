@@ -66,6 +66,18 @@ codebase version ──► git ls-tree ──► AST chunks ──► content ha
 - Adding story-only or I/O-only views to the query embedding lowers the score; the default stays at the full statement (`query_views: {full: 1.0}`), which was the configured default before these runs.
 - The submission JSON is `results/appsretrieval_results.json`; attach it to a GitHub release.
 
+### P1: re-indexing new versions (psf/requests, RTX 4060)
+
+| Version | Files | Chunks | Newly embedded | Reused | Time (s) |
+|---|---|---|---|---|---|
+| v2.30.0 | 35 | 533 | 533 | 0.0% | 6.43 |
+| v2.31.0 | 35 | 534 | 4 | 99.3% | 0.13 |
+| v2.32.0 | 36 | 558 | 88 | 84.2% | 1.46 |
+| v2.32.3 | 36 | 559 | 7 | 98.7% | 0.22 |
+
+- Each later version re-embeds only the functions whose content changed; on average an incremental re-index is 10.7x faster than the first full index (`results/versions_benchmark.json`).
+- Queries over the indexed versions answer in about 80–130 ms.
+
 ### Dataset notes
 
 - `CoIR-Retrieval/apps`: 5,000 train and 3,765 test queries over one shared corpus of 8,765 Python solutions, one correct solution per query.
