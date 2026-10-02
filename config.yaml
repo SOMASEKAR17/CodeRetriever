@@ -19,7 +19,7 @@ profiles:
     rerank_top_k: 0
   gpu:
     dtype: bf16
-    reranker: Qwen/Qwen3-Reranker-4B
+    reranker: null
     rerank_top_k: 50
 
 query_views:

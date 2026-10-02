@@ -29,7 +29,7 @@ codebase version ──► git ls-tree ──► AST chunks ──► content ha
 - **P0 pipeline:** each query is embedded as weighted views (whole statement, story-only, I/O specification). For APPS-style problems, candidates can be checked against the examples in the statement and the passing ones promoted.
 - **P1:** each file is identified by its Git blob hash and each function by a content hash, so a new version only embeds the functions that changed. A version is a manifest of hashes; searching a version masks the vectors to that manifest.
 - **Bonus:** functions are linked into lineages across versions, following edits and file renames. A search over all versions returns one result per lineage with its version timeline and the diff that changed it. Mentioning a version ("in v2.31") or a change ("when was … added") routes the query automatically.
-- **Devices:** CPU and GPU use the same embedding weights, so indexes stay valid when you switch. The GPU profile adds a Qwen3 reranker for the top results.
+- **Devices:** CPU and GPU use the same embedding weights, so indexes stay valid when you switch. The GPU profile can add a reranker for the top results (`profiles.gpu.reranker`); it is off by default because Qwen3-Reranker-4B needs about 8 GB of VRAM for its weights alone.
 
 ## Findings so far
 
