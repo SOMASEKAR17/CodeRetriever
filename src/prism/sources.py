@@ -56,20 +56,23 @@ class GitSource:
         for line in out.splitlines():
             if not line.strip():
                 continue
-            name, obj, peeled, stamp = (line.split("\t") + ["", "", ""])[:4]
-            versions.append(Version(name, peeled or obj, int(stamp or 0)))
+            name, obj, peeled, _ = (line.split("\t") + ["", "", ""])[:4]
+            commit = peeled or obj
+            versions.append(Version(name, commit, self.depth(commit)))
         if include_branches:
             out = self._git("for-each-ref", "--sort=committerdate", "--format=%(refname:short)\t%(objectname)\t%(committerdate:unix)", "refs/heads")
             for line in out.splitlines():
                 if line.strip():
-                    name, obj, stamp = (line.split("\t") + ["", ""])[:3]
-                    versions.append(Version(name, obj, int(stamp or 0)))
+                    name, obj, _ = (line.split("\t") + ["", ""])[:3]
+                    versions.append(Version(name, obj, self.depth(obj)))
         return versions
+
+    def depth(self, commit: str) -> int:
+        return int(self._git("rev-list", "--count", commit).strip() or 0)
 
     def version(self, ref: str) -> Version:
         commit = self.resolve(ref)
-        stamp = self._git("log", "-1", "--format=%ct", commit).strip()
-        return Version(ref, commit, int(stamp or 0))
+        return Version(ref, commit, self.depth(commit))
 
     def list_files(self, version: Version) -> list[tuple[str, str]]:
         out = subprocess.run(["git", "-C", self.repo, "ls-tree", "-r", "-l", "-z", version.ref], capture_output=True, check=True).stdout

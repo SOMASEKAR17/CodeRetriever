@@ -114,6 +114,9 @@ class Engine:
                 versions = [v for v in versions if v.label in refs]
             for version in versions:
                 stats.append(self._index_version(source_id, source, version, source.list_files(version), progress))
+        from .evolution import rebuild_lineages
+
+        rebuild_lineages(self, source_id)
         return stats
 
     def _version_id(self, source_id: str, version: Version) -> str:
@@ -167,6 +170,11 @@ class Engine:
         )
         progress(f"indexed {version.label} ({version_id}): {json.dumps(result.as_dict())}")
         return result
+
+    def search_evolution(self, query: str, source_id: str, k: int = 10):
+        from .evolution import search_lineages
+
+        return search_lineages(self, query, source_id, k)
 
     def versions(self, source_id: str) -> list[dict]:
         return [{"version_id": v, "label": l, "ref": r, "ordinal": o} for v, l, r, o in self.store.versions(source_id)]

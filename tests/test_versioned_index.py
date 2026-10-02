@@ -108,6 +108,28 @@ class VersionedIndexTest(unittest.TestCase):
         stats = self.engine.index(corpus, progress=lambda m: None)[0]
         self.assertEqual(stats.files, 3)
 
+    def test_lineages_follow_edits_and_renames(self):
+        from prism.evolution import detect_intent
+
+        self.engine.index(self.source, ["v1", "v2", "v3"], progress=lambda m: None)
+        intent, hits = self.engine.search_evolution("compute total discount subtotal", self.source, k=3)
+        self.assertEqual(intent.kind, "latest")
+        top = hits[0]
+        self.assertEqual(top.symbol, "compute_total")
+        self.assertEqual([t["label"] for t in top.timeline], ["v1", "v2", "v3"])
+        self.assertEqual([t["changed"] for t in top.timeline], [False, True, False])
+        self.assertEqual(top.label, "v3")
+        symbols = [h.symbol for h in hits]
+        self.assertEqual(len(symbols), len(set((h.symbol, h.path) for h in hits)))
+        _, change_hits = self.engine.search_evolution("when was the discount added to compute total", self.source, k=1)
+        self.assertEqual(change_hits[0].label, "v2")
+        self.assertIn("+    return subtotal * (1 - discount)", change_hits[0].diff)
+        _, renamed = self.engine.search_evolution("checkout cart compute total items", self.source, k=5)
+        checkout = next(h for h in renamed if h.symbol == "checkout")
+        self.assertEqual([t["path"] for t in checkout.timeline], ["main.py", "main.py", "app.py"])
+        versions = self.engine.versions(self.source)
+        self.assertEqual(detect_intent("compute_total in v1", versions).kind, "version")
+
 
 if __name__ == "__main__":
     unittest.main()

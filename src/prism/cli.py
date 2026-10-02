@@ -81,6 +81,9 @@ def cmd_index(args) -> None:
 
 def cmd_search(args) -> None:
     engine = build_engine(args)
+    if args.version == "all" and not args.flat:
+        cmd_search_evolution(engine, args)
+        return
     started = time.time()
     hits = engine.search(args.query, args.source, args.version, args.k)
     elapsed = time.time() - started
@@ -96,6 +99,26 @@ def cmd_search(args) -> None:
             print(f"    also in {len(places) - 1} other place(s)/version(s)")
         preview = "\n".join(hit.code.splitlines()[: args.lines])
         print("    " + preview.replace("\n", "\n    "))
+
+
+def cmd_search_evolution(engine, args) -> None:
+    started = time.time()
+    intent, hits = engine.search_evolution(args.query, args.source, args.k)
+    elapsed = time.time() - started
+    if args.json:
+        print(json.dumps({"seconds": round(elapsed, 3), "intent": intent.__dict__, "hits": [h.__dict__ for h in hits]}, indent=2))
+        return
+    mode = f"version {intent.matched}" if intent.kind == "version" else intent.kind
+    print(f"{len(hits)} results in {elapsed * 1000:.0f} ms (mode: {mode})")
+    for rank, hit in enumerate(hits, 1):
+        print(f"\n#{rank}  score {hit.score:.4f}  {hit.symbol}  {hit.path}:{hit.start_line}-{hit.end_line}  [{hit.label}]")
+        if hit.timeline:
+            marks = " -> ".join(f"{t['label']}{'*' if t['changed'] else ''}" for t in hit.timeline)
+            print(f"    versions: {marks}   (* = changed)")
+        preview = "\n".join(hit.code.splitlines()[: args.lines])
+        print("    " + preview.replace("\n", "\n    "))
+        if hit.diff and args.diff:
+            print("    diff:\n    " + hit.diff.replace("\n", "\n    "))
 
 
 def cmd_bench(args) -> None:
@@ -147,6 +170,8 @@ def main(argv=None) -> None:
     p.add_argument("-k", type=int, default=10)
     p.add_argument("--lines", type=int, default=8)
     p.add_argument("--json", action="store_true")
+    p.add_argument("--flat", action="store_true", help="return raw chunks instead of one result per lineage")
+    p.add_argument("--diff", action="store_true", help="show the diff to the previous version")
     p.set_defaults(func=cmd_search)
 
     p = sub.add_parser("bench-versions", help="index versions in order and report reuse and timings")
