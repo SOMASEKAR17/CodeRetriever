@@ -73,7 +73,7 @@ class VersionedIndexTest(unittest.TestCase):
 
     def test_blob_sha_matches_git(self):
         path = self.repo / "utils.py"
-        expected = subprocess.run(["git", "hash-object", str(path)], capture_output=True, text=True, check=True).stdout.strip()
+        expected = subprocess.run(["git", "hash-object", "--no-filters", str(path)], capture_output=True, text=True, check=True).stdout.strip()
         self.assertEqual(git_blob_sha(path.read_bytes()), expected)
 
     def test_incremental_indexing_reuses_unchanged_code(self):
