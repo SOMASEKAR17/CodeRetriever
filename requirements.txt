@@ -1,0 +1,13 @@
+numpy
+sentence-transformers==6.1.0
+transformers==5.18.0
+datasets==5.0.1
+accelerate==1.15.0
+peft==0.21.2
+mteb==2.22.1
+huggingface_hub==1.33.0
+sentencepiece==0.2.2
+protobuf==7.36.2
+pyyaml
+tqdm
+pandas

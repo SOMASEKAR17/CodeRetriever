@@ -1,0 +1,311 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CodeRetriever Architecture</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500&family=Manrope:wght@500;600;700;800&display=swap">
+<style>
+/* Layout: one reading column; each figure sits in its own scrollable frame, a file map closes the page */
+:root{
+  --bg:#fbf6f8;--fg:#2b1621;--muted:#6f5663;--line:#dcc9d3;--panel:#ffffff;--band:#f5eaef;
+  --lane:#9a6a82;--edge:#5d4452;--accent:#b0175a;--accent-soft:#fbe1ec;
+  --sans:"Manrope","Segoe UI",system-ui,-apple-system,sans-serif;
+  --mono:"JetBrains Mono","Cascadia Code",Consolas,ui-monospace,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#1b0c14;--fg:#f6e8ef;--muted:#bda4b1;--line:#4b2f3e;--panel:#24111b;--band:#2c1621;
+  --lane:#c48aa7;--edge:#d4b8c6;--accent:#ff6b9a;--accent-soft:#4a1630;color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#1b0c14;--fg:#f6e8ef;--muted:#bda4b1;--line:#4b2f3e;--panel:#24111b;--band:#2c1621;
+  --lane:#c48aa7;--edge:#d4b8c6;--accent:#ff6b9a;--accent-soft:#4a1630;color-scheme:dark}
+body{background:var(--bg);color:var(--fg);font:15px/1.6 var(--sans)}
+.wrap{max-width:1080px;margin:0 auto;padding-inline:20px;padding-block:36px 64px}
+.eyebrow{font:700 12px/1 var(--sans);letter-spacing:.14em;text-transform:uppercase;color:var(--lane)}
+h1{font:800 clamp(28px,4.2vw,42px)/1.08 var(--sans);margin:12px 0 10px;text-wrap:balance;letter-spacing:-.01em}
+.lede{color:var(--muted);max-width:66ch;margin:0}
+figure{margin:44px 0 0;display:grid;gap:12px}
+h2{font:700 19px/1.3 var(--sans);margin:0;text-wrap:balance}
+.frame{overflow-x:auto;border:1px solid var(--line);border-radius:16px;background:var(--panel);padding:14px}
+svg{display:block;width:100%;height:auto;min-width:760px;color:var(--edge)}
+figcaption{color:var(--muted);max-width:72ch;font-size:14px}
+.band{fill:var(--band)}
+.lane{font:700 10.5px var(--sans);letter-spacing:.12em;fill:var(--lane)}
+.box{fill:var(--panel);stroke:var(--line);stroke-width:1.3}
+.box.hot{fill:var(--accent-soft);stroke:var(--accent);stroke-width:1.7}
+.n-title{font:700 13.5px var(--sans);fill:var(--fg)}
+.n-sub{font:500 11.5px var(--sans);fill:var(--muted)}
+.d-text{font:600 11.5px var(--sans);fill:var(--fg)}
+.e-label{font:500 10.5px var(--mono);fill:var(--muted)}
+.e-label.hot{fill:var(--accent)}
+.edge{fill:none;stroke:var(--edge);stroke-width:1.4}
+.edge.hot{stroke:var(--accent);stroke-width:1.9}
+.edge.dash{stroke-dasharray:6 5;stroke:var(--lane)}
+.arrowhead{fill:var(--edge)}
+.arrowhead.hot{fill:var(--accent)}
+.map{margin-top:44px}
+.map table{width:100%;border-collapse:collapse;margin-top:12px;font-size:14px}
+.map th,.map td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+.map th{font-weight:700;color:var(--muted);font-size:12px;letter-spacing:.08em;text-transform:uppercase}
+.map td code{font:500 12.5px var(--mono);color:var(--fg)}
+.map .scroll{overflow-x:auto}
+</style>
+
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Samsung PRISM · Theme 1 · Agentic Code Intelligence</div>
+    <h1>CodeRetriever Architecture</h1>
+    <p class="lede">How the application indexes versions of a codebase, answers a natural-language query, and produces the AppsRetrieval submission. Drawn from the current code on the <code>dev</code> branch.</p>
+  </header>
+
+  <figure>
+    <h2>The two paths through the system</h2>
+    <div class="frame">
+      <svg viewBox="0 0 1000 560" role="img" aria-label="Codebase versions flow through a version manifest and an AST chunker into a shared EmbeddingGemma-300m model and SQLite chunk store. Queries from the desktop window, browser or CLI reach a query router that searches one chosen version or detects intent across all versions; the query text is embedded by the same model, searched within a version mask, and returned as hits or grouped by function lineage.">
+        <defs>
+          <marker id="f1a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrowhead" d="M0,0 L10,5 L0,10 z"/></marker>
+        </defs>
+        <rect class="band" x="10" y="16" width="980" height="134" rx="14"/>
+        <text class="lane" x="24" y="38">INDEXING A VERSION</text>
+        <rect class="band" x="10" y="190" width="980" height="124" rx="14"/>
+        <text class="lane" x="24" y="212">MODEL AND STORE</text>
+        <rect class="band" x="10" y="354" width="980" height="196" rx="14"/>
+        <text class="lane" x="24" y="376">ANSWERING A QUERY</text>
+
+        <rect class="box" x="20" y="50" width="190" height="80" rx="12"/>
+        <text class="n-title" x="34" y="76">Your codebase</text>
+        <text class="n-sub" x="34" y="96">Git repo or URL</text>
+        <text class="n-sub" x="34" y="113">folder · snippet file</text>
+
+        <rect class="box" x="270" y="50" width="190" height="80" rx="12"/>
+        <text class="n-title" x="284" y="76">Version manifest</text>
+        <text class="n-sub" x="284" y="96">path + blob hash per file</text>
+        <text class="n-sub" x="284" y="113">unchanged files reused</text>
+
+        <rect class="box" x="520" y="50" width="190" height="80" rx="12"/>
+        <text class="n-title" x="534" y="76">AST chunker</text>
+        <text class="n-sub" x="534" y="96">one chunk per function</text>
+        <text class="n-sub" x="534" y="113">content hash per chunk</text>
+
+        <rect class="box hot" x="520" y="222" width="190" height="80" rx="12"/>
+        <text class="n-title" x="534" y="248">EmbeddingGemma</text>
+        <text class="n-sub" x="534" y="268">300M params, 768-dim</text>
+        <text class="n-sub" x="534" y="285">same weights, CPU or GPU</text>
+
+        <rect class="box" x="770" y="222" width="190" height="80" rx="12"/>
+        <text class="n-title" x="784" y="248">Chunk store</text>
+        <text class="n-sub" x="784" y="268">SQLite: manifests, chunks</text>
+        <text class="n-sub" x="784" y="285">vectors and lineages</text>
+
+        <rect class="box" x="20" y="388" width="190" height="80" rx="12"/>
+        <text class="n-title" x="34" y="414">Interfaces</text>
+        <text class="n-sub" x="34" y="434">desktop window, browser</text>
+        <text class="n-sub" x="34" y="451">prism CLI</text>
+
+        <rect class="box" x="270" y="388" width="190" height="80" rx="12"/>
+        <text class="n-title" x="284" y="414">Query router</text>
+        <text class="n-sub" x="284" y="434">one version, or all</text>
+        <text class="n-sub" x="284" y="451">all → detect intent</text>
+
+        <rect class="box" x="770" y="388" width="190" height="80" rx="12"/>
+        <text class="n-title" x="784" y="414">Masked search</text>
+        <text class="n-sub" x="784" y="434">cosine within a version</text>
+        <text class="n-sub" x="784" y="451">lineage grouping, rerank</text>
+
+        <line class="edge" x1="210" y1="90" x2="270" y2="90" marker-end="url(#f1a)"/>
+        <text class="e-label" x="240" y="82" text-anchor="middle">versions</text>
+        <line class="edge" x1="460" y1="90" x2="520" y2="90" marker-end="url(#f1a)"/>
+        <text class="e-label" x="490" y="82" text-anchor="middle">changed</text>
+        <line class="edge" x1="615" y1="130" x2="615" y2="222" marker-end="url(#f1a)"/>
+        <text class="e-label" x="625" y="181">new chunks only</text>
+        <path class="edge" d="M710 90 H865 V222" marker-end="url(#f1a)"/>
+        <text class="e-label" x="788" y="82" text-anchor="middle">chunks + manifest</text>
+        <line class="edge" x1="710" y1="262" x2="770" y2="262" marker-end="url(#f1a)"/>
+        <text class="e-label" x="740" y="254" text-anchor="middle">vectors</text>
+        <line class="edge" x1="210" y1="428" x2="270" y2="428" marker-end="url(#f1a)"/>
+        <text class="e-label" x="240" y="420" text-anchor="middle">query</text>
+        <path class="edge" d="M365 388 V262 H520" marker-end="url(#f1a)"/>
+        <text class="e-label" x="442" y="254" text-anchor="middle">query text</text>
+        <path class="edge" d="M615 302 V440 H770" marker-end="url(#f1a)"/>
+        <text class="e-label" x="692" y="432" text-anchor="middle">query vector</text>
+        <line class="edge" x1="865" y1="302" x2="865" y2="388" marker-end="url(#f1a)"/>
+        <text class="e-label" x="875" y="350">version mask</text>
+        <path class="edge" d="M865 468 V515 H115 V468" marker-end="url(#f1a)"/>
+        <text class="e-label" x="490" y="507" text-anchor="middle">results: hits, or one card per function lineage with timeline and diff</text>
+        <path class="edge" d="M190 388 V130" marker-end="url(#f1a)"/>
+        <text class="e-label" x="180" y="262" text-anchor="end">add a folder or Git URL</text>
+      </svg>
+    </div>
+    <figcaption>Both paths share one embedding model and one store. Indexing a new version only parses files whose blob hash changed and only embeds chunks whose content hash is new. A query is embedded by the same model and searched inside the chosen version's chunks. With all versions selected, the router checks whether the question names a version, asks when something changed, or just wants the code, and groups results by function lineage. The desktop window and browser reach the engine through a local HTTP API; the CLI calls it directly. Because CPU and GPU run the same weights, switching device never invalidates an index.</figcaption>
+  </figure>
+
+  <figure>
+    <h2>What indexing a new version costs</h2>
+    <div class="frame">
+      <svg viewBox="0 0 1000 300" role="img" aria-label="Indexing v2 of the example repository: main.py's blob was already indexed, so its chunks are reused; utils.py is re-chunked, parse_config's content hash is already embedded and reused, and only compute_total is embedded, so v2 needs 1 new embedding out of 4 chunks.">
+        <defs>
+          <marker id="f2a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrowhead" d="M0,0 L10,5 L0,10 z"/></marker>
+          <marker id="f2h" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrowhead hot" d="M0,0 L10,5 L0,10 z"/></marker>
+        </defs>
+        <rect class="box" x="20" y="125" width="170" height="80" rx="12"/>
+        <text class="n-title" x="34" y="151">v2 manifest</text>
+        <text class="n-sub" x="34" y="171">main.py · unchanged</text>
+        <text class="n-sub" x="34" y="188">utils.py · edited</text>
+
+        <polygon class="box" points="230,165 290,120 350,165 290,210"/>
+        <text class="d-text" x="290" y="162" text-anchor="middle">file blob</text>
+        <text class="d-text" x="290" y="177" text-anchor="middle">indexed?</text>
+
+        <rect class="box" x="390" y="35" width="200" height="50" rx="12"/>
+        <text class="n-title" x="404" y="56">Reuse its chunks</text>
+        <text class="n-sub" x="404" y="73">no parsing, no embedding</text>
+
+        <rect class="box" x="400" y="135" width="160" height="60" rx="12"/>
+        <text class="n-title" x="414" y="160">AST chunker</text>
+        <text class="n-sub" x="414" y="178">utils.py → 2 chunks</text>
+
+        <polygon class="box" points="595,165 655,120 715,165 655,210"/>
+        <text class="d-text" x="655" y="162" text-anchor="middle">chunk</text>
+        <text class="d-text" x="655" y="177" text-anchor="middle">embedded?</text>
+
+        <rect class="box hot" x="690" y="237" width="170" height="50" rx="12"/>
+        <text class="n-title" x="704" y="258">EmbeddingGemma</text>
+        <text class="n-sub" x="704" y="275">embeds 1 new chunk</text>
+
+        <rect class="box" x="810" y="130" width="170" height="70" rx="12"/>
+        <text class="n-title" x="824" y="154">Chunk store</text>
+        <text class="n-sub" x="824" y="173">v2 = 4 chunk hashes</text>
+        <text class="n-sub" x="824" y="190">1 embedded, 3 reused</text>
+
+        <line class="edge" x1="190" y1="165" x2="230" y2="165" marker-end="url(#f2a)"/>
+        <path class="edge" d="M290 120 V60 H390" marker-end="url(#f2a)"/>
+        <text class="e-label" x="300" y="95">yes · main.py</text>
+        <path class="edge" d="M590 60 H890 V130" marker-end="url(#f2a)"/>
+        <text class="e-label" x="740" y="52" text-anchor="middle">2 chunks reused</text>
+        <line class="edge" x1="350" y1="165" x2="400" y2="165" marker-end="url(#f2a)"/>
+        <text class="e-label" x="375" y="157" text-anchor="middle">no</text>
+        <line class="edge" x1="560" y1="165" x2="595" y2="165" marker-end="url(#f2a)"/>
+        <path class="edge" d="M655 120 V100 H850 V130" marker-end="url(#f2a)"/>
+        <text class="e-label" x="752" y="92" text-anchor="middle">yes · parse_config</text>
+        <path class="edge hot" d="M655 210 V262 H690" marker-end="url(#f2h)"/>
+        <text class="e-label hot" x="645" y="242" text-anchor="end">no · compute_total</text>
+        <path class="edge hot" d="M860 262 H930 V200" marker-end="url(#f2h)"/>
+        <text class="e-label hot" x="940" y="236">1 vector</text>
+      </svg>
+    </div>
+    <figcaption>Example from the project's unit-test repository, where v2 edits one function in <code>utils.py</code>. The unchanged file is reused by its Git blob hash, <code>parse_config</code> is reused by its content hash, and only <code>compute_total</code> reaches the model: 1 new embedding for v2's 4 chunks. Searching v2 then masks the vectors to exactly those 4 hashes.</figcaption>
+  </figure>
+
+  <figure>
+    <h2>From training data to the screening file</h2>
+    <div class="frame">
+      <svg viewBox="0 0 1120 350" role="img" aria-label="Training uses the APPS train split with hard negatives mined from train solutions and produces a fine-tuned model. Its weights cross into the screening run only if it beats the base model on a 500-problem dev set; the first run scored 76.28 against 79.41 and was not kept. In the screening run, AppsRetrieval test queries are embedded as weighted views, searched against the 8,765 solutions, and written to the MTEB results file.">
+        <defs>
+          <marker id="f3a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrowhead" d="M0,0 L10,5 L0,10 z"/></marker>
+          <marker id="f3h" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrowhead hot" d="M0,0 L10,5 L0,10 z"/></marker>
+        </defs>
+        <rect class="band" x="10" y="16" width="1100" height="130" rx="14"/>
+        <text class="lane" x="24" y="40">TRAINING · ONCE, ON THE RTX 4060</text>
+        <rect class="band" x="10" y="196" width="1100" height="144" rx="14"/>
+        <text class="lane" x="24" y="220">SCREENING RUN · CPU</text>
+        <line class="edge dash" x1="10" y1="171" x2="1110" y2="171"/>
+        <text class="e-label" x="330" y="165" text-anchor="middle">test data never enters training</text>
+
+        <rect class="box" x="20" y="56" width="176" height="70" rx="12"/>
+        <text class="n-title" x="34" y="80">APPS train split</text>
+        <text class="n-sub" x="34" y="99">1,150 training problems</text>
+        <text class="n-sub" x="34" y="116">500 held out as dev set</text>
+
+        <rect class="box" x="246" y="56" width="176" height="70" rx="12"/>
+        <text class="n-title" x="260" y="80">Hard negatives</text>
+        <text class="n-sub" x="260" y="99">3 per problem</text>
+        <text class="n-sub" x="260" y="116">train solutions only</text>
+
+        <rect class="box hot" x="472" y="56" width="176" height="70" rx="12"/>
+        <text class="n-title" x="486" y="80">Fine-tuned model</text>
+        <text class="n-sub" x="486" y="99">contrastive loss, bf16</text>
+        <text class="n-sub" x="486" y="116">1 epoch, 1,079 tuples</text>
+
+        <rect class="box" x="698" y="56" width="176" height="70" rx="12"/>
+        <text class="n-title" x="712" y="80">Dev check</text>
+        <text class="n-sub" x="712" y="99">500 problems, NDCG@10</text>
+        <text class="n-sub" x="712" y="116">v1 76.28, base 79.41</text>
+
+        <rect class="box" x="20" y="240" width="176" height="70" rx="12"/>
+        <text class="n-title" x="34" y="264">AppsRetrieval test</text>
+        <text class="n-sub" x="34" y="283">3,765 problems</text>
+        <text class="n-sub" x="34" y="300">8,765 solutions</text>
+
+        <rect class="box" x="246" y="240" width="176" height="70" rx="12"/>
+        <text class="n-title" x="260" y="264">Query views</text>
+        <text class="n-sub" x="260" y="283">full, core, I/O spec</text>
+        <text class="n-sub" x="260" y="300">weighted, normalised</text>
+
+        <rect class="box" x="472" y="240" width="176" height="70" rx="12"/>
+        <text class="n-title" x="486" y="264">Encoder</text>
+        <text class="n-sub" x="486" y="283">base or fine-tuned</text>
+        <text class="n-sub" x="486" y="300">CPU, fp32</text>
+
+        <rect class="box" x="698" y="240" width="176" height="70" rx="12"/>
+        <text class="n-title" x="712" y="264">Exact search</text>
+        <text class="n-sub" x="712" y="283">cosine over 8,765</text>
+        <text class="n-sub" x="712" y="300">example check optional</text>
+
+        <rect class="box" x="924" y="240" width="176" height="70" rx="12"/>
+        <text class="n-title" x="938" y="264">Results file</text>
+        <text class="n-sub" x="938" y="283">MTEB results JSON</text>
+        <text class="n-sub" x="938" y="300">attached to a release</text>
+
+        <line class="edge" x1="196" y1="91" x2="246" y2="91" marker-end="url(#f3a)"/>
+        <text class="e-label" x="221" y="83" text-anchor="middle">pairs</text>
+        <line class="edge" x1="422" y1="91" x2="472" y2="91" marker-end="url(#f3a)"/>
+        <text class="e-label" x="447" y="83" text-anchor="middle">tuples</text>
+        <line class="edge" x1="648" y1="91" x2="698" y2="91" marker-end="url(#f3a)"/>
+        <text class="e-label" x="673" y="83" text-anchor="middle">score</text>
+        <path class="edge hot" d="M786 126 V186 H560 V240" marker-end="url(#f3h)"/>
+        <text class="e-label hot" x="796" y="161">weights, only if it wins</text>
+
+        <line class="edge" x1="196" y1="275" x2="246" y2="275" marker-end="url(#f3a)"/>
+        <text class="e-label" x="221" y="267" text-anchor="middle">queries</text>
+        <line class="edge" x1="422" y1="275" x2="472" y2="275" marker-end="url(#f3a)"/>
+        <text class="e-label" x="447" y="267" text-anchor="middle">views</text>
+        <line class="edge" x1="648" y1="275" x2="698" y2="275" marker-end="url(#f3a)"/>
+        <text class="e-label" x="673" y="267" text-anchor="middle">vectors</text>
+        <line class="edge" x1="874" y1="275" x2="924" y2="275" marker-end="url(#f3a)"/>
+        <text class="e-label" x="899" y="267" text-anchor="middle">ranked</text>
+        <path class="edge" d="M108 310 V328 H520 V310" marker-end="url(#f3a)"/>
+        <text class="e-label" x="314" y="323" text-anchor="middle">solutions</text>
+      </svg>
+    </div>
+    <figcaption>Training touches only the train split, and the only thing that can cross into the screening run is a set of weights that beats the base model on the 500-problem dev set. The first run, <code>egemma-ft-v1</code>, scored 76.28 NDCG@10 on dev against the base model's 79.41, so it was not kept. The screening run therefore uses the base EmbeddingGemma, which scored 84.05 NDCG@10 on the test split.</figcaption>
+  </figure>
+
+  <section class="map">
+    <h2>Where each part lives</h2>
+    <div class="scroll">
+      <table>
+        <thead><tr><th>Part</th><th>Code</th></tr></thead>
+        <tbody>
+          <tr><td>Sources: Git repo or URL, folder, snippet file</td><td><code>src/prism/sources.py</code></td></tr>
+          <tr><td>Version manifest and chunk store</td><td><code>src/prism/store.py</code></td></tr>
+          <tr><td>AST chunker and content hashes</td><td><code>src/prism/chunker.py</code>, <code>hashing.py</code></td></tr>
+          <tr><td>Embedding model and device profiles</td><td><code>src/prism/embedder.py</code>, <code>config.py</code>, <code>config.yaml</code></td></tr>
+          <tr><td>Indexing and masked search</td><td><code>src/prism/engine.py</code>, <code>vector_index.py</code></td></tr>
+          <tr><td>Function lineages and intent router</td><td><code>src/prism/evolution.py</code></td></tr>
+          <tr><td>Query views and example check</td><td><code>src/prism/preprocess.py</code>, <code>execution.py</code></td></tr>
+          <tr><td>Optional GPU reranker</td><td><code>src/prism/reranker.py</code></td></tr>
+          <tr><td>Local API, desktop window, UI</td><td><code>src/prism/server.py</code>, <code>desktop.py</code>, <code>static/index.html</code></td></tr>
+          <tr><td>Command line</td><td><code>src/prism/cli.py</code></td></tr>
+          <tr><td>Screening submission</td><td><code>src/prism/mteb_adapter.py</code>, <code>scripts/run_pipeline_mteb.py</code></td></tr>
+          <tr><td>Training</td><td><code>scripts/finetune.py</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
+</body>
+</html>

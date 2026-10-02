@@ -8,7 +8,16 @@ version = "0.1.0"
 description = "Version-aware text-to-code retrieval for the Samsung PRISM Agentic Code Intelligence theme"
 readme = "README.md"
 requires-python = ">=3.10"
-dependencies = []
+dependencies = ["numpy"]
+
+[project.optional-dependencies]
+model = ["sentence-transformers>=6.1", "transformers>=5.18", "torch"]
+
+[project.scripts]
+prism = "prism.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+prism = ["static/*"]

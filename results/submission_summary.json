@@ -1,0 +1,18 @@
+{
+  "tag": "submission",
+  "checkpoint": null,
+  "device": "cpu",
+  "dtype": "fp32",
+  "views": {
+    "full": 1.0,
+    "core": 0.0,
+    "io": 0.0
+  },
+  "mode": "encoder",
+  "execute_examples": false,
+  "minutes": 97.9,
+  "ndcg_at_10": 0.8403,
+  "mrr_at_10": 0.8070197516811061,
+  "recall_at_100": 0.99522,
+  "peak_vram_gb": 0.0
+}
