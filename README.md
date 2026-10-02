@@ -85,29 +85,80 @@ codebase version ──► git ls-tree ──► AST chunks ──► content ha
 
 ## Setup
 
-Requires Python 3.10–3.13. Inference runs on CPU; an NVIDIA GPU is optional.
+Requirements: Python 3.10–3.13 and Git. An NVIDIA GPU is optional; everything also runs on CPU.
 
-```bash
+**1. Clone and create a virtual environment**
+
+```powershell
+git clone https://github.com/SOMASEKAR17/CodeRetriever.git
+cd CodeRetriever
 python -m venv .venv
-.venv/Scripts/python -m pip install torch --index-url https://download.pytorch.org/whl/cu130
-.venv/Scripts/python -m pip install -r requirements.txt -r requirements-desktop.txt
-.venv/Scripts/python -m pip install -e .
+.venv\Scripts\activate
 ```
 
-- Use the PyTorch index that matches your driver (`cu130`, `cu128`, `cu126`), or `pip install torch` for CPU only.
-- EmbeddingGemma is gated on Hugging Face: accept its licence, then run `hf auth login`.
-- `requirements-desktop.txt` (pywebview) is only needed for the desktop window.
+On Linux or macOS, activate with `source .venv/bin/activate`.
+
+**2. Install PyTorch**
+
+```powershell
+pip install torch --index-url https://download.pytorch.org/whl/cu130   # NVIDIA GPU
+pip install torch                                                     # CPU only
+```
+
+Pick the CUDA index that matches your driver (`cu130`, `cu128`, `cu126`).
+
+**3. Install CodeRetriever**
+
+```powershell
+pip install -r requirements.txt -r requirements-desktop.txt
+pip install -e .
+```
+
+`requirements-desktop.txt` adds pywebview for the desktop window; skip it if you only use the browser or the CLI.
+
+**4. Log in to Hugging Face (one time)**
+
+EmbeddingGemma is a gated model. Accept its licence at https://huggingface.co/google/embeddinggemma-300m, create a read token, then:
+
+```powershell
+hf auth login
+```
+
+The model (about 1.2 GB) downloads on first use.
+
+**Windows notes**
+
+- If importing torch fails with `WinError 4551`, Smart App Control is blocking its DLLs; turn it off in Windows Security → App & browser control.
+- The desktop window uses Microsoft Edge WebView2, which is preinstalled on Windows 10 and 11.
 
 ## Using the app
 
-```bash
-prism desktop
-prism serve
+**Start it**
+
+```powershell
+prism desktop            # native window
+prism serve              # same app in your browser at http://127.0.0.1:8765
+prism --device cpu desktop
 ```
 
-`prism desktop` opens a native window (pywebview, Windows WebView2) with a folder picker; without pywebview it opens in your browser. `prism serve` runs the same app at `http://127.0.0.1:8765`.
+The first start loads the model, which takes a few seconds. Indexes are stored in `~/.prism` (set `PRISM_INDEX_DIR` to change this).
 
-In the app: add a folder or a Git HTTPS URL, pick versions (tags or branches) to index, then search one version or all versions. The CPU/GPU switch is in the bottom-left corner.
+**1. Add a codebase.** Open **Codebases**, paste a Git HTTPS URL (it is cloned for you) or a folder path, or click **Browse** to pick a folder. Give it a name if you like and click **Add**.
+
+**2. Index versions.** Open **Versions**, choose the codebase and click **Load versions** to list its tags and branches. Tick the versions you want and click **Index selected**. The table shows how many chunks were newly embedded and how many were reused from earlier versions. A plain folder indexes as a single snapshot.
+
+**3. Search.** Open **Search**, describe what the code does in plain words, choose a version or **All versions**, and press **Search** or Ctrl+Enter.
+
+- A single version returns the best-matching functions in that version.
+- **All versions** returns one result per function with its version timeline. Questions such as "when was the retry limit changed" open the version where it changed, with the diff.
+- Mentioning a version in the query ("parse_config in v1.2") searches that version only.
+
+**Window and panels**
+
+- ☰ (top left) opens the list of codebases; ⓘ (top right) opens details, indexed versions and recent activity. Both slide over the page; close them with ×, Esc or a click outside.
+- **CPU / GPU** (top right) switches the device. Both use the same model, so existing indexes stay valid.
+- In the desktop window the coloured buttons at the top left close, minimise and maximise; drag the top bar to move the window and double-click it to maximise.
+- **Benchmarks** shows the AppsRetrieval scores and **Settings** shows the model, device and index folder.
 
 ## Using the CLI
 
