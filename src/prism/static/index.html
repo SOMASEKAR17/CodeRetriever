@@ -47,7 +47,7 @@ body.native.blur .traffic button{background:#3a3a3a}
 .devinfo{font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);text-align:right;line-height:1.35}
 .devinfo b{display:block;color:var(--fg);font-weight:500}
 
-main{position:absolute;inset:64px 0 0 0;overflow:auto}
+main{position:absolute;inset:64px 0 0 0;overflow-x:hidden;overflow-y:auto}
 .view{display:none;padding:0 0 80px}
 .view.active{display:block;animation:fade .35s var(--ease)}
 @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
@@ -56,7 +56,7 @@ main{position:absolute;inset:64px 0 0 0;overflow:auto}
 .hero{position:relative;padding:56px 0 40px;border-bottom:1px solid var(--line);overflow:hidden}
 .hero .waves{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;opacity:.5}
 .hero .waves path{fill:none;stroke:rgba(255,255,255,.16);stroke-width:1}
-.hero-grid{position:relative;display:grid;grid-template-columns:1fr minmax(220px,300px);gap:40px;align-items:end}
+.hero-grid{position:relative;display:grid;grid-template-columns:minmax(0,1fr) minmax(220px,300px);gap:40px;align-items:end}
 .display{font-weight:300;text-transform:uppercase;letter-spacing:-.035em;line-height:.9;margin:0;font-size:clamp(46px,7.4vw,108px)}
 .display.sm{font-size:clamp(38px,5.2vw,72px)}
 .lede{text-transform:uppercase;font-size:11.5px;letter-spacing:.06em;line-height:1.6;color:var(--fg);margin:0}
@@ -84,11 +84,12 @@ select.field option{background:#111;color:var(--fg)}
 .section-head h3{margin:0;font-weight:400;font-size:11px;letter-spacing:.16em;text-transform:uppercase}
 .section-head span{color:var(--muted);font-size:11.5px}
 .list{border-top:1px solid var(--line)}
-.result{display:grid;grid-template-columns:72px 1fr;gap:20px;padding:22px 0;border-bottom:1px solid var(--line)}
+.result{display:grid;grid-template-columns:72px minmax(0,1fr);gap:20px;padding:22px 0;border-bottom:1px solid var(--line)}
 .result .rank{font-weight:200;font-size:40px;line-height:1;letter-spacing:-.04em;color:var(--muted)}
 .result .rank small{display:block;font-family:var(--mono);font-size:10.5px;letter-spacing:0;margin-top:8px}
-.result h4{margin:0;font-weight:500;font-size:17px;letter-spacing:-.01em;font-family:var(--mono)}
-.result .where{color:var(--muted);font-size:12px;margin-top:3px;font-family:var(--mono)}
+.result > div{min-width:0}
+.result h4{word-break:break-word;margin:0;font-weight:500;font-size:17px;letter-spacing:-.01em;font-family:var(--mono)}
+.result .where{word-break:break-all;color:var(--muted);font-size:12px;margin-top:3px;font-family:var(--mono)}
 .tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
 .tag{border:1px solid var(--line);border-radius:999px;padding:2px 10px;font-size:10.5px;letter-spacing:.06em;color:var(--muted)}
 .tag.changed{border-color:var(--fg);color:var(--fg)}
@@ -132,13 +133,13 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 
 .scrim{position:fixed;inset:64px 0 0 0;background:rgba(0,0,0,.55);opacity:0;pointer-events:none;transition:opacity .3s var(--ease);z-index:40}
 .scrim.on{opacity:1;pointer-events:auto}
-.drawer{position:fixed;top:64px;bottom:0;width:340px;max-width:88vw;background:var(--bg);z-index:50;display:flex;flex-direction:column;transition:transform .35s var(--ease)}
-.drawer.left{left:0;border-right:1px solid var(--line);transform:translateX(-100%)}
-.drawer.right{right:0;border-left:1px solid var(--line);transform:translateX(100%)}
+.drawer{overflow:hidden;position:fixed;top:64px;bottom:0;width:340px;max-width:88vw;background:var(--bg);z-index:50;display:flex;flex-direction:column;transition:transform .35s var(--ease)}
+.drawer.from-left{left:0;border-right:1px solid var(--line);transform:translateX(-100%)}
+.drawer.from-right{right:0;border-left:1px solid var(--line);transform:translateX(100%)}
 .drawer.open{transform:none}
 .dhead{display:flex;justify-content:space-between;align-items:center;width:100%;margin:0;padding:20px 24px;border-bottom:1px solid var(--line)}
 .dhead h3{margin:0;font-weight:400;font-size:11px;letter-spacing:.16em;text-transform:uppercase}
-.drawer .scroll{overflow:auto;flex:1;padding:8px 24px 24px}
+.drawer .scroll{overflow-x:hidden;overflow-y:auto;flex:1;padding:8px 24px 24px}
 .drawer h5{margin:22px 0 6px;font-weight:400;font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);display:flex;justify-content:space-between}
 .drawer h5 span{cursor:pointer;color:var(--fg)}
 .drawer h5 span:hover{text-decoration:underline}
@@ -147,9 +148,9 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 .srcitem b{font-weight:400;font-size:16px;letter-spacing:-.01em}
 .srcitem.active b::before{content:"→ "}
 .srcitem span{font-family:var(--mono);font-size:10.5px}
-.line-item{padding:10px 0;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;gap:12px;font-size:13px}
-.line-item span{color:var(--muted);font-family:var(--mono);font-size:10.5px;white-space:nowrap}
-.line-item b{font-weight:400;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.line-item{padding:10px 0;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:baseline;gap:12px;font-size:13px;min-width:0}
+.line-item span{flex:none;color:var(--muted);font-family:var(--mono);font-size:10.5px;white-space:nowrap}
+.line-item b{flex:1;min-width:0;font-weight:400;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .detail-title{font-weight:300;font-size:30px;letter-spacing:-.03em;margin:18px 0 4px;word-break:break-word}
 
 .toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:10px 20px;border-radius:999px;font-size:11px;letter-spacing:.1em;text-transform:uppercase;display:none;z-index:60}
@@ -184,7 +185,7 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 
 <div class="scrim" id="scrim"></div>
 
-<aside class="drawer left" id="leftDrawer" aria-label="Codebases">
+<aside class="drawer from-left" id="leftDrawer" aria-label="Codebases">
   <div class="dhead"><h3>Codebases</h3><button class="iconbtn" data-close aria-label="Close"><svg viewBox="0 0 16 16"><path d="M4 4l8 8M12 4l-8 8"/></svg></button></div>
   <div class="scroll">
     <div id="railSources"></div>
@@ -192,7 +193,7 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
   </div>
 </aside>
 
-<aside class="drawer right" id="rightDrawer" aria-label="Details">
+<aside class="drawer from-right" id="rightDrawer" aria-label="Details">
   <div class="dhead"><h3>Details</h3><button class="iconbtn" data-close aria-label="Close"><svg viewBox="0 0 16 16"><path d="M4 4l8 8M12 4l-8 8"/></svg></button></div>
   <div class="scroll">
     <div id="profile"><div class="detail-title">No codebase</div><div class="log" style="margin-top:0">Add one to get started</div></div>
