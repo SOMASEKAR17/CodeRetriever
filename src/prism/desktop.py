@@ -6,7 +6,7 @@ from .server import App, make_server
 
 class Bridge:
     def __init__(self):
-        self.window = None
+        self._window = None
 
     def pick_folder(self):
         import webview
@@ -14,7 +14,7 @@ class Bridge:
         dialog = getattr(getattr(webview, "FileDialog", None), "FOLDER", None)
         if dialog is None:
             dialog = webview.FOLDER_DIALOG
-        result = self.window.create_file_dialog(dialog)
+        result = self._window.create_file_dialog(dialog)
         if not result:
             return None
         return result[0] if isinstance(result, (list, tuple)) else result
@@ -40,14 +40,14 @@ def launch(app: App, host: str = "127.0.0.1", port: int = 8765) -> None:
             server.shutdown()
         return
     bridge = Bridge()
-    bridge.window = webview.create_window(
+    bridge._window = webview.create_window(
         "CodeRetriever",
         url,
         width=1440,
         height=920,
-        min_size=(1100, 700),
+        min_size=(900, 640),
         js_api=bridge,
-        background_color="#5b0f37",
+        background_color="#0b0b0b",
     )
     webview.start()
     server.shutdown()
