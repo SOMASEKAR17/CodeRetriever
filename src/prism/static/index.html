@@ -129,8 +129,8 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 .drawer.left{left:0;border-right:1px solid var(--line);transform:translateX(-100%)}
 .drawer.right{right:0;border-left:1px solid var(--line);transform:translateX(100%)}
 .drawer.open{transform:none}
-.drawer header{display:flex;justify-content:space-between;align-items:center;padding:20px 24px;border-bottom:1px solid var(--line)}
-.drawer header h3{margin:0;font-weight:400;font-size:11px;letter-spacing:.16em;text-transform:uppercase}
+.dhead{display:flex;justify-content:space-between;align-items:center;width:100%;margin:0;padding:20px 24px;border-bottom:1px solid var(--line)}
+.dhead h3{margin:0;font-weight:400;font-size:11px;letter-spacing:.16em;text-transform:uppercase}
 .drawer .scroll{overflow:auto;flex:1;padding:8px 24px 24px}
 .drawer h5{margin:22px 0 6px;font-weight:400;font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);display:flex;justify-content:space-between}
 .drawer h5 span{cursor:pointer;color:var(--fg)}
@@ -173,7 +173,7 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 <div class="scrim" id="scrim"></div>
 
 <aside class="drawer left" id="leftDrawer" aria-label="Codebases">
-  <header><h3>Codebases</h3><button class="iconbtn" data-close aria-label="Close"><svg viewBox="0 0 16 16"><path d="M4 4l8 8M12 4l-8 8"/></svg></button></header>
+  <div class="dhead"><h3>Codebases</h3><button class="iconbtn" data-close aria-label="Close"><svg viewBox="0 0 16 16"><path d="M4 4l8 8M12 4l-8 8"/></svg></button></div>
   <div class="scroll">
     <div id="railSources"></div>
     <div style="margin-top:22px"><button class="btn ghost" data-view-link="codebases" style="width:100%">Add a codebase</button></div>
@@ -181,7 +181,7 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 </aside>
 
 <aside class="drawer right" id="rightDrawer" aria-label="Details">
-  <header><h3>Details</h3><button class="iconbtn" data-close aria-label="Close"><svg viewBox="0 0 16 16"><path d="M4 4l8 8M12 4l-8 8"/></svg></button></header>
+  <div class="dhead"><h3>Details</h3><button class="iconbtn" data-close aria-label="Close"><svg viewBox="0 0 16 16"><path d="M4 4l8 8M12 4l-8 8"/></svg></button></div>
   <div class="scroll">
     <div id="profile"><div class="detail-title">No codebase</div><div class="log" style="margin-top:0">Add one to get started</div></div>
     <h5>Indexed versions <span data-view-link="versions">Manage</span></h5>

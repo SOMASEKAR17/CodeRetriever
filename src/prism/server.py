@@ -5,7 +5,7 @@ import traceback
 import uuid
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from importlib import resources
-from urllib.parse import parse_qs, urlparse
+from urllib.parse import parse_qs, unquote, urlparse
 
 
 class App:
@@ -145,7 +145,7 @@ def make_handler(app: App):
 
         def _route(self, method: str) -> None:
             url = urlparse(self.path)
-            parts = [p for p in url.path.split("/") if p]
+            parts = [unquote(p) for p in url.path.split("/") if p]
             query = parse_qs(url.query)
             try:
                 if method == "GET" and not parts:
