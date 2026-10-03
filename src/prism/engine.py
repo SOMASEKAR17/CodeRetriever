@@ -1,5 +1,8 @@
 import json
+import os
 import re
+import shutil
+import stat
 import time
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
@@ -36,6 +39,11 @@ class Hit:
     language: str
     code: str
     occurrences: list[dict] = field(default_factory=list)
+
+
+def _force_remove(func, path, _exc_info) -> None:
+    os.chmod(path, stat.S_IWRITE)
+    func(path)
 
 
 def _slug(text: str) -> str:
@@ -77,6 +85,26 @@ class Engine:
     def add_corpus(self, files: list[str], source_id: str) -> str:
         self.store.add_source(source_id, "corpus", json.dumps([str(Path(f).resolve()) for f in files]))
         return source_id
+
+    def remove_source(self, source_id: str, delete_clone: bool = True) -> dict:
+        row = self.store.source(source_id)
+        if row is None:
+            raise KeyError(f"unknown source {source_id}")
+        source = self._sources.pop(source_id, None)
+        if source is not None and hasattr(source, "close"):
+            source.close()
+        versions = self.store.remove_source(source_id)
+        self.vectors = VectorIndex(self.embedder.dim)
+        hashes, matrix = self.store.embeddings(self.embedder.space)
+        if hashes:
+            self.vectors.add(hashes, matrix)
+        clone_removed = False
+        repos = (self.index_dir / "repos").resolve()
+        location = Path(row[2]) if row[1] != "corpus" else None
+        if delete_clone and location is not None and location.resolve().parent == repos and location.exists():
+            shutil.rmtree(location, onerror=_force_remove)
+            clone_removed = True
+        return {"source": source_id, "versions_removed": versions, "clone_removed": clone_removed}
 
     def source(self, source_id: str):
         if source_id in self._sources:

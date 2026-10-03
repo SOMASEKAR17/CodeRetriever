@@ -71,6 +71,18 @@ class VersionedIndexTest(unittest.TestCase):
         self.engine.store.close()
         self.tmp.cleanup()
 
+    def test_remove_source_keeps_original_repo(self):
+        self.engine.index(self.source, ["v1", "v2"], progress=lambda m: None)
+        result = self.engine.remove_source(self.source)
+        self.assertEqual(result["versions_removed"], 2)
+        self.assertFalse(result["clone_removed"])
+        self.assertTrue((self.repo / "utils.py").exists())
+        self.assertEqual(self.engine.store.sources(), [])
+        self.assertEqual(self.engine.store.db.execute("SELECT COUNT(*) FROM embeddings").fetchone()[0], 0)
+        self.assertEqual(len(self.engine.vectors.hashes), 0)
+        with self.assertRaises(KeyError):
+            self.engine.remove_source(self.source)
+
     def test_blob_sha_matches_git(self):
         path = self.repo / "utils.py"
         expected = subprocess.run(["git", "hash-object", "--no-filters", str(path)], capture_output=True, text=True, check=True).stdout.strip()

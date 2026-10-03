@@ -84,6 +84,10 @@ class App:
         threading.Thread(target=run, daemon=True).start()
         return job_id
 
+    def remove_source(self, source_id: str) -> dict:
+        with self.lock:
+            return self.engine.remove_source(source_id)
+
     def add_source(self, body: dict) -> str:
         location = body["location"].strip()
         source_id = body.get("id") or None
@@ -163,6 +167,8 @@ def make_handler(app: App):
                     return self._send(200, app.sources())
                 if method == "POST" and route == ["sources"]:
                     return self._send(202, {"job": app.add_source(self._body())})
+                if method == "DELETE" and len(route) == 2 and route[0] == "sources":
+                    return self._send(200, app.remove_source(route[1]))
                 if method == "GET" and len(route) == 3 and route[0] == "sources" and route[2] == "available":
                     return self._send(200, app.available_versions(route[1]))
                 if method == "POST" and len(route) == 3 and route[0] == "sources" and route[2] == "index":
@@ -183,6 +189,9 @@ def make_handler(app: App):
 
         def do_POST(self):
             self._route("POST")
+
+        def do_DELETE(self):
+            self._route("DELETE")
 
     return Handler
 

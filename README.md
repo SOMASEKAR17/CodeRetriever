@@ -9,6 +9,9 @@ Describe what a piece of code does in plain language, and CodeRetriever ranks th
 
 Full diagrams: [docs/architecture.html](docs/architecture.html) (overview, incremental indexing, training and submission).
 
+
+**Presentation:** [CodeRetriever_PRISM_2026.pptx](CodeRetriever_PRISM_2026.pptx) · **Demo video:** [demo-video.mp4](demo-video.mp4)
+
 ## Status
 
 Development happens on `dev`; `main` is updated at each milestone.
@@ -51,7 +54,7 @@ codebase version ──► git ls-tree ──► AST chunks ──► content ha
 - The correct solution is in the top 100 for 99.5% of queries but ranked first only about 75% of the time, so the remaining gains are in ranking, not recall.
 - On a 500-query dev set held out from the train split, the generic prompt (`task: search result`) scored 79.4 NDCG@10 vs 78.8 for the code prompt, so fine-tuning keeps the generic prompt.
 - Only 1,650 train queries match the contest style of the test split (no starter code); fine-tuning uses 1,150 of them with 3 mined hard negatives each.
-- Fine-tuning result (`egemma-ft-v1`: 1 epoch, 1,079 tuples, lr 1e-5, CachedMNRL, 161 min on the RTX 4060): dev NDCG@10 fell from 79.41 to 76.28, and test from 84.05 to 82.04 (MRR@10 80.73 to 78.56). The base model is kept. Likely causes: EmbeddingGemma is already strong on this task, and mined hard negatives in APPS include near-duplicate problems (false negatives).
+- Fine-tuning result (`egemma-ft-v1`: 1 epoch, 1,079 tuples, lr 1e-5, CachedMNRL, 161 min on the RTX 4060): dev NDCG@10 fell from 79.41 to 76.28, and test from 84.05 to 82.04 (MRR@10 80.73 to 78.56). The base model is kept. A likely cause is that some mined hard negatives were near-duplicate problems, which act as false negatives.
 
 ### Submission run and query views
 
@@ -158,6 +161,7 @@ The first start loads the model, which takes a few seconds. Indexes are stored i
 - ☰ (top left) opens the list of codebases; ⓘ (top right) opens details, indexed versions and recent activity. Both slide over the page; close them with ×, Esc or a click outside.
 - **CPU / GPU** (top right) switches the device. Both use the same model, so existing indexes stay valid.
 - In the desktop window the coloured buttons at the top left close, minimise and maximise; drag the top bar to move the window and double-click it to maximise.
+- To remove a codebase, open **Codebases** and click **Remove** on its card. This deletes its indexed versions and, for a Git URL, the clone the app made; your original folders are never touched.
 - **Benchmarks** shows the AppsRetrieval scores and **Settings** shows the model, device and index folder.
 
 ## Using the CLI
@@ -169,6 +173,7 @@ prism index requests --refs v2.31.0 v2.32.0
 prism search "how are redirects limited" --source requests --version v2.32.0
 prism search "when was the redirect limit changed" --source requests --diff
 prism bench-versions requests --refs v2.32.2 v2.32.3
+prism remove requests
 ```
 
 `--version all` (the default) returns one result per function lineage with its version timeline; `--flat` returns raw chunks instead. Add `--device cpu|cuda` to choose the device and `--embedder hash` for a model-free smoke test.
@@ -240,3 +245,7 @@ scripts/           evaluation, training and benchmark scripts
 tests/             unit tests
 models/            fine-tuned weights (not in git)
 ```
+
+## AI disclosure
+
+See [AI_DISCLOSURE.md](AI_DISCLOSURE.md) for how AI assistance was used in this project.
