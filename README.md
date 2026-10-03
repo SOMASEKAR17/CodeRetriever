@@ -240,3 +240,7 @@ scripts/           evaluation, training and benchmark scripts
 tests/             unit tests
 models/            fine-tuned weights (not in git)
 ```
+
+## AI disclosure
+
+See [AI_DISCLOSURE.md](AI_DISCLOSURE.md) for how AI assistance was used in this project.
