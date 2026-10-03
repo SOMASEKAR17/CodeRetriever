@@ -10,7 +10,7 @@ Describe what a piece of code does in plain language, and CodeRetriever ranks th
 Full diagrams: [docs/architecture.html](docs/architecture.html) (overview, incremental indexing, training and submission).
 
 
-**Presentation:** [CodeRetriever_PRISM_2026.pptx](CodeRetriever_PRISM_2026.pptx) · **Demo video:** _link coming soon_
+**Presentation:** [CodeRetriever_PRISM_2026.pptx](CodeRetriever_PRISM_2026.pptx) · **Demo video:** [demo-video.mp4](demo-video.mp4)
 
 ## Status
 
