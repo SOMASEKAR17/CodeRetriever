@@ -161,6 +161,7 @@ The first start loads the model, which takes a few seconds. Indexes are stored i
 - ☰ (top left) opens the list of codebases; ⓘ (top right) opens details, indexed versions and recent activity. Both slide over the page; close them with ×, Esc or a click outside.
 - **CPU / GPU** (top right) switches the device. Both use the same model, so existing indexes stay valid.
 - In the desktop window the coloured buttons at the top left close, minimise and maximise; drag the top bar to move the window and double-click it to maximise.
+- To remove a codebase, open **Codebases** and click **Remove** on its card. This deletes its indexed versions and, for a Git URL, the clone the app made; your original folders are never touched.
 - **Benchmarks** shows the AppsRetrieval scores and **Settings** shows the model, device and index folder.
 
 ## Using the CLI
@@ -172,6 +173,7 @@ prism index requests --refs v2.31.0 v2.32.0
 prism search "how are redirects limited" --source requests --version v2.32.0
 prism search "when was the redirect limit changed" --source requests --diff
 prism bench-versions requests --refs v2.32.2 v2.32.3
+prism remove requests
 ```
 
 `--version all` (the default) returns one result per function lineage with its version timeline; `--flat` returns raw chunks instead. Add `--device cpu|cuda` to choose the device and `--embedder hash` for a model-free smoke test.

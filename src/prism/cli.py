@@ -55,6 +55,12 @@ def cmd_add(args) -> None:
     print(f"added source {source_id}")
 
 
+def cmd_remove(args) -> None:
+    engine = build_engine(args)
+    result = engine.remove_source(args.source, delete_clone=not args.keep_clone)
+    print(f"removed {result['source']}: {result['versions_removed']} indexed version(s)" + (", deleted its clone" if result["clone_removed"] else ""))
+
+
 def cmd_versions(args) -> None:
     engine = build_engine(args)
     indexed = {v["version_id"]: v for v in engine.versions(args.source)}
@@ -166,6 +172,11 @@ def main(argv=None) -> None:
     p.add_argument("--partial", action="store_true")
     p.add_argument("--corpus", nargs="+")
     p.set_defaults(func=cmd_add)
+
+    p = sub.add_parser("remove", help="remove a source, its indexed versions and (for cloned URLs) its clone")
+    p.add_argument("source")
+    p.add_argument("--keep-clone", action="store_true", help="keep the cloned repository on disk")
+    p.set_defaults(func=cmd_remove)
 
     p = sub.add_parser("versions", help="list indexed (and available) versions")
     p.add_argument("source")

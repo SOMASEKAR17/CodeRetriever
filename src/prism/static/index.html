@@ -76,6 +76,8 @@ select.field option{background:#111;color:var(--fg)}
 .btn:hover{background:transparent;color:var(--fg)}
 .btn.ghost{background:transparent;color:var(--fg);border-color:var(--line2)}
 .btn.ghost:hover{border-color:var(--fg)}
+.btn.danger{margin-left:auto;color:var(--muted)}
+.btn.danger:hover{color:#ff6b6b;border-color:#ff6b6b}
 .btn:disabled{opacity:.4;cursor:default}
 .grow{flex:1}
 .kbd{font-family:var(--mono);font-size:10.5px;color:var(--dim);margin-left:auto}
@@ -351,7 +353,7 @@ async function loadSources() {
   const options = state.sources.map(s => `<option value="${esc(s.id)}">${esc(s.id)}</option>`).join("") || '<option value="">No codebases</option>';
   for (const id of ["searchSource", "versionsSource"]) { $(id).innerHTML = options; if (state.active) $(id).value = state.active; }
   $("sourceCount").textContent = `${state.sources.length} added`;
-  $("sourceCards").innerHTML = state.sources.map(s => `<div class="card"><div class="k">${esc(s.kind)} · ${s.versions.length} version${s.versions.length === 1 ? "" : "s"} indexed</div><h4>${esc(s.id)}</h4><div class="loc">${esc(s.location)}</div><div class="row"><button class="btn ghost" data-open="${esc(s.id)}">Versions</button><button class="btn" data-search="${esc(s.id)}">Search</button></div></div>`).join("") || '<div class="card"><div class="empty">No codebases yet.</div></div>';
+  $("sourceCards").innerHTML = state.sources.map(s => `<div class="card"><div class="k">${esc(s.kind)} · ${s.versions.length} version${s.versions.length === 1 ? "" : "s"} indexed</div><h4>${esc(s.id)}</h4><div class="loc">${esc(s.location)}</div><div class="row"><button class="btn ghost" data-open="${esc(s.id)}">Versions</button><button class="btn" data-search="${esc(s.id)}">Search</button><button class="btn ghost danger" data-remove="${esc(s.id)}" title="Remove this codebase and its index">Remove</button></div></div>`).join("") || '<div class="card"><div class="empty">No codebases yet.</div></div>';
   fillVersionSelect();
   renderPanel();
 }
@@ -368,10 +370,23 @@ function renderPanel() {
 function selectSource(id) { state.active = id; $("searchSource").value = id; $("versionsSource").value = id; fillVersionSelect(); loadSources(); }
 $("railSources").onclick = e => { const b = e.target.closest("[data-source]"); if (b) { selectSource(b.dataset.source); closeDrawers(); } };
 $("sourceCards").onclick = e => {
-  const open = e.target.closest("[data-open]"), go = e.target.closest("[data-search]");
+  const open = e.target.closest("[data-open]"), go = e.target.closest("[data-search]"), rm = e.target.closest("[data-remove]");
+  if (rm) { removeSource(rm.dataset.remove, rm); return; }
   if (open) { selectSource(open.dataset.open); setView("versions"); }
   if (go) { selectSource(go.dataset.search); setView("search"); $("query").focus(); }
 };
+async function removeSource(id, button) {
+  if (!confirm(`Remove "${id}"? Its indexed versions are deleted, and a repository cloned from a URL is deleted from disk. The original folder or repository is not touched.`)) return;
+  button.disabled = true;
+  try {
+    const r = await api(`/api/sources/${encodeURIComponent(id)}`, {method: "DELETE"});
+    if (state.active === id) state.active = null;
+    log("removed", id);
+    toast(`Removed ${id}` + (r.clone_removed ? " and its clone" : ""));
+    await loadSources();
+    if (!state.sources.length) { $("profile").innerHTML = '<div class="detail-title">No codebase</div><div class="log" style="margin-top:0">Add one to get started</div>'; $("panelVersions").innerHTML = '<div class="empty">Nothing indexed yet.</div>'; }
+  } catch (err) { toast(err.message); button.disabled = false; }
+}
 $("searchSource").onchange = () => selectSource($("searchSource").value);
 $("versionsSource").onchange = () => selectSource($("versionsSource").value);
 async function pollJob(id, onTick) {

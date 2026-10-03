@@ -40,6 +40,22 @@ class Store:
         self.db.execute("INSERT OR REPLACE INTO sources VALUES (?, ?, ?)", (source_id, kind, location))
         self.db.commit()
 
+    def remove_source(self, source_id: str) -> int:
+        db = self.db
+        versions = [r[0] for r in db.execute("SELECT version_id FROM versions WHERE source_id = ?", (source_id,))]
+        for version_id in versions:
+            db.execute("DELETE FROM version_files WHERE version_id = ?", (version_id,))
+        db.execute("DELETE FROM versions WHERE source_id = ?", (source_id,))
+        if db.execute("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'lineage_members'").fetchone():
+            db.execute("DELETE FROM lineage_members WHERE source_id = ?", (source_id,))
+        db.execute("DELETE FROM sources WHERE source_id = ?", (source_id,))
+        db.execute("DELETE FROM blob_chunks WHERE blob_sha NOT IN (SELECT DISTINCT blob_sha FROM version_files)")
+        db.execute("DELETE FROM blobs WHERE blob_sha NOT IN (SELECT DISTINCT blob_sha FROM version_files)")
+        db.execute("DELETE FROM chunks WHERE chunk_hash NOT IN (SELECT DISTINCT chunk_hash FROM blob_chunks)")
+        db.execute("DELETE FROM embeddings WHERE chunk_hash NOT IN (SELECT chunk_hash FROM chunks)")
+        db.commit()
+        return len(versions)
+
     def sources(self) -> list[tuple[str, str, str]]:
         return self.db.execute("SELECT source_id, kind, location FROM sources ORDER BY source_id").fetchall()
 
